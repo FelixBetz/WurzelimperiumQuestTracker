@@ -1,0 +1,111 @@
+:root {
+  --bg: #f4f6f0;
+  --panel: #ffffff;
+  --panel-2: #eef2e7;
+  --text: #1e2a19;
+  --muted: #64705d;
+  --border: #dde3d4;
+  --accent: #3f9142;
+  --accent-strong: #2f7a34;
+  --accent-soft: #e6f2e2;
+  --warn: #b9770f;
+  --danger: #c0392b;
+  --shadow: 0 1px 2px rgba(20, 30, 15, 0.06), 0 2px 8px rgba(20, 30, 15, 0.05);
+  --radius: 12px;
+
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12160e;
+    --panel: #1b2015;
+    --panel-2: #232a1b;
+    --text: #e7ecdf;
+    --muted: #9aa78d;
+    --border: #313a26;
+    --accent: #5cae5f;
+    --accent-strong: #7cc47e;
+    --accent-soft: #24331f;
+    --warn: #e0a94a;
+    --danger: #e0685c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.4rem 0.7rem;
+  transition: background 0.12s, border-color 0.12s;
+}
+button:hover {
+  border-color: var(--accent);
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+button.primary:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+button.ghost {
+  background: transparent;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+input[type='number'],
+input[type='text'] {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0.3rem 0.45rem;
+}
+input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+a {
+  color: var(--accent-strong);
+}
+
+/* dünne, unaufdringliche Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}

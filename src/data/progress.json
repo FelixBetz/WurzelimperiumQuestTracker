@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "level": 22,
+  "locked": [
+    "wassergarten",
+    "monsterpilzzucht",
+    "schneckenrennen",
+    "mine",
+    "recyclinghof",
+    "reisebuero",
+    "herr-knollentriebs-herausforderung"
+  ],
+  "series": {
+    "traditionelle-questreihe": 77,
+    "kakteenquestreihe": 1,
+    "kakteenquestreihe-echino-reihe": 24,
+    "kakteenquestreihe-bighead-reihe": 1,
+    "kakteenquestreihe-opuntia-reihe": 0,
+    "kakteenquestreihe-saguaro-reihe": 0,
+    "erholungsgarten-i-gartenhaeuschen": 5,
+    "erholungsgarten-i-gartenhecke": 5,
+    "erholungsgarten-i-gartenzaun": 20,
+    "erholungsgarten-i-gartenteich": 10,
+    "erholungsgarten-ii-baum": 30,
+    "erholungsgarten-ii-grillplatz": 20,
+    "erholungsgarten-ii-mauer": 20,
+    "wassergarten": 0,
+    "monsterpilzzucht": 0,
+    "bonsai": 36,
+    "stadtpark": 46,
+    "bienengarten": 33,
+    "schneckenrennen": 0,
+    "mine": 0,
+    "recyclinghof": 0,
+    "reisebuero": 0,
+    "herr-knollentriebs-herausforderung": 0
+  }
+}
