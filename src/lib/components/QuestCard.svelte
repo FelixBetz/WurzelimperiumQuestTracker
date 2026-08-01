@@ -1,5 +1,5 @@
 <script>
-  import { fmt, questLabel } from '../format.js';
+  import { fmt, questLabel, rewardLabel, rewardIcon } from '../format.js';
 
   // Reine Anzeige: done = erledigt, current = erste offene Quest der Reihe.
   let { quest, done = false, current = false } = $props();
@@ -18,7 +18,15 @@
         >{#if i < quest.requirements.length - 1}<span class="dot">·</span>{/if}{/each}
     </span>
 
-    <span class="reward" title="Belohnung">🎁 {quest.rewardText || '–'}</span>
+    <span class="rewards">
+      {#if quest.rewards.length === 0}
+        <span class="reward">–</span>
+      {:else}
+        {#each quest.rewards as r, i (i)}
+          <span class="reward">{rewardIcon(r)} {rewardLabel(r)}</span>
+        {/each}
+      {/if}
+    </span>
   </div>
 </article>
 
@@ -91,11 +99,17 @@
   .dot {
     color: var(--muted);
   }
-  .reward {
+  .rewards {
     margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.3rem 0.6rem;
+    flex: none;
+  }
+  .reward {
     color: var(--muted);
     font-size: 0.85rem;
-    text-align: right;
-    flex: none;
+    white-space: nowrap;
   }
 </style>

@@ -47,6 +47,14 @@ export const sidebar = (() => {
 const itemNames = new Set();
 for (const s of series) for (const q of s.quests) for (const r of q.requirements) itemNames.add(r.item);
 
+// Manche Quests verlangen Wurzeltaler als Bedarf (nicht als Belohnung, z.B.
+// "1.500.000 wT für 1 Medaille"). Das ist kein anbaubarer Gegenstand und wird
+// aus "was anpflanzen"-Aggregationen (Empfehlungen, Charts) ausgeschlossen –
+// in der normalen Quest-Anzeige bleibt es korrekterweise stehen.
+export function isCurrencyItem(name) {
+  return /^(wT|Wurzeltaler)$/i.test(name);
+}
+
 // Manche Reihen schreiben denselben Gegenstand mal Singular, mal Plural
 // (z. B. "Tomate" vs. "Tomaten"). Für die Empfehlungen führen wir sie
 // zusammen – aber nur, wenn beide Formen wirklich vorkommen (sicher).
@@ -83,4 +91,38 @@ export const overallProgress = (() => {
   for (const s of series) done += doneCount(s, progress);
   const total = meta.questCount;
   return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+})();
+
+// Bereits verdiente Belohnungen aus allen erledigten Quests (alle Reihen).
+export const earnedRewards = (() => {
+  let taler = 0;
+  let punkte = 0;
+  for (const s of series) {
+    const count = doneCount(s, progress);
+    for (let i = 0; i < count; i++) {
+      for (const r of s.quests[i].rewards) {
+        if (r.type === 'taler') taler += r.amount;
+        else if (r.type === 'punkte') punkte += r.amount;
+      }
+    }
+  }
+  return { taler, punkte };
+})();
+
+// Bereits verbrauchte Gegenstände aus allen erledigten Quests (alle Reihen),
+// Singular/Plural zusammengeführt und ohne Währungs-Pseudo-Items. Absteigend
+// sortiert, die Komponente greift sich davon die Top N.
+export const spentItems = (() => {
+  const map = new Map();
+  for (const s of series) {
+    const count = doneCount(s, progress);
+    for (let i = 0; i < count; i++) {
+      for (const r of s.quests[i].requirements) {
+        if (isCurrencyItem(r.item)) continue;
+        const key = canonicalItem(r.item);
+        map.set(key, (map.get(key) ?? 0) + r.amount);
+      }
+    }
+  }
+  return [...map.entries()].map(([item, amount]) => ({ item, amount })).sort((a, b) => b.amount - a.amount);
 })();

@@ -1,5 +1,5 @@
 <script>
-  import { series, currentQuest, openQuests, canonicalItem, progress, isLocked } from '../data.js';
+  import { series, currentQuest, openQuests, canonicalItem, isCurrencyItem, progress, isLocked } from '../data.js';
   import { settings } from '../store.js';
   import { fmt } from '../format.js';
 
@@ -29,6 +29,7 @@
     const map = new Map();
     for (const { s, q } of scopeQuests) {
       for (const r of q.requirements) {
+        if (isCurrencyItem(r.item)) continue;
         const key = canonicalItem(r.item);
         let e = map.get(key);
         if (!e) {

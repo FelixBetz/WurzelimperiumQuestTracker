@@ -1,7 +1,7 @@
 <script>
   import { series, currentQuest, doneCount, progress, isLocked } from '../data.js';
   import { settings } from '../store.js';
-  import { fmt, questLabel } from '../format.js';
+  import { fmt, questLabel, rewardLabel, rewardIcon } from '../format.js';
 
   let { onselect } = $props();
 
@@ -41,7 +41,15 @@
                   ><b>{fmt(r.amount)}</b> {r.item}</span
                 >{#if i < row.q.requirements.length - 1}<span class="dot">·</span>{/if}{/each}
             </span>
-            <span class="reward">🎁 {row.q.rewardText || '–'}</span>
+            <span class="rewards">
+              {#if row.q.rewards.length === 0}
+                <span class="reward">–</span>
+              {:else}
+                {#each row.q.rewards as r, i (i)}
+                  <span class="reward">{rewardIcon(r)} {rewardLabel(r)}</span>
+                {/each}
+              {/if}
+            </span>
           </div>
         </button>
       {/each}
@@ -121,8 +129,14 @@
   .dot {
     color: var(--muted);
   }
-  .reward {
+  .rewards {
     margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.3rem 0.6rem;
+  }
+  .reward {
     color: var(--muted);
     font-size: 0.85rem;
     white-space: nowrap;
