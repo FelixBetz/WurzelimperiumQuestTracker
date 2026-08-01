@@ -18,17 +18,31 @@
     if (levelLocked(s)) return `Level ${s.minLevel} nötig`;
     return '';
   }
+
+  // Bei "Erledigte ausblenden" verschwinden auch komplett fertige Reihen
+  // aus der Seitenleiste (nicht nur die einzelnen Quests in der Detailansicht).
+  function isDone(s) {
+    return doneCount(s, progress) >= s.quests.length;
+  }
+  function hide(s) {
+    return $settings.hideCompleted && isDone(s);
+  }
 </script>
 
 <nav class="side">
   {#each sidebar as node}
     {#if node.type === 'solo'}
-      {@render row(node.series)}
+      {#if !hide(node.series)}
+        {@render row(node.series)}
+      {/if}
     {:else}
-      <div class="grouphead">{node.name}</div>
-      {#each node.list as s}
-        {@render row(s, true)}
-      {/each}
+      {@const visibleList = node.list.filter((s) => !hide(s))}
+      {#if visibleList.length > 0}
+        <div class="grouphead">{node.name}</div>
+        {#each visibleList as s}
+          {@render row(s, true)}
+        {/each}
+      {/if}
     {/if}
   {/each}
 </nav>
