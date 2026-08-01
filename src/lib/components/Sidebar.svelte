@@ -84,7 +84,7 @@
   }
   .item {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: auto auto;
     gap: 0.15rem 0.5rem;
     text-align: left;
@@ -93,6 +93,7 @@
     border-radius: 9px;
     padding: 0.45rem 0.6rem;
     width: 100%;
+    min-width: 0;
   }
   .item:hover {
     background: var(--panel-2);
@@ -111,6 +112,10 @@
   .name {
     font-weight: 550;
     font-size: 0.92rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .lock {
     font-size: 0.8rem;

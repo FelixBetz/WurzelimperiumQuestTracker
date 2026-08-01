@@ -200,11 +200,13 @@
     position: sticky;
     top: 74px;
     max-height: calc(100vh - 90px);
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
+    min-width: 0;
   }
   .side-opts {
     padding: 0.7rem 0.7rem 0.2rem;
