@@ -14,8 +14,10 @@ export function isLocked(s) {
   return lockedIds.has(s.id);
 }
 
+const buildDate = import.meta.env.VITE_BUILD_DATE || raw.generatedAt;
+
 export const meta = {
-  generatedAt: raw.generatedAt,
+  generatedAt: buildDate,
   source: raw.source,
   seriesCount: raw.seriesCount,
   questCount: raw.questCount,

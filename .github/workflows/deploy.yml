@@ -30,6 +30,8 @@ jobs:
         env:
           # Base-Pfad = /<repo-name>/ , damit Assets auf Pages korrekt laden.
           VITE_BASE: /${{ github.event.repository.name }}/
+          # Datum des Workflow-Starts für die Anzeige im Webinterface.
+          VITE_BUILD_DATE: ${{ github.event.head_commit.timestamp || github.run_started_at }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
