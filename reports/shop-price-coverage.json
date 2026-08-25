@@ -1,0 +1,563 @@
+{
+  "generatedAt": "2026-08-25T10:18:13.106Z",
+  "totalQuests": 1244,
+  "nonCurrencyRequirementRows": 3028,
+  "shopEligibleRequirementRows": 2730,
+  "nonShopExcludedRows": 298,
+  "matchedRows": 2489,
+  "rowCoveragePct": 91.17,
+  "uniqueRequirementItems": 219,
+  "uniqueShopEligibleItems": 180,
+  "uniqueMatchedItems": 118,
+  "uniqueCoveragePct": 65.56,
+  "missingUniqueCount": 62,
+  "excludedUniqueCount": 39,
+  "topExcludedByRows": [
+    {
+      "item": "Orangen-Honig",
+      "rows": 24,
+      "totalAmount": 7470
+    },
+    {
+      "item": "Kakao-Honig",
+      "rows": 18,
+      "totalAmount": 6279
+    },
+    {
+      "item": "Kaffee-Honig",
+      "rows": 17,
+      "totalAmount": 5457
+    },
+    {
+      "item": "Distel-Honig",
+      "rows": 14,
+      "totalAmount": 5932
+    },
+    {
+      "item": "Wegwarten-Honig",
+      "rows": 14,
+      "totalAmount": 4960
+    },
+    {
+      "item": "Orchideen-Honig",
+      "rows": 12,
+      "totalAmount": 7689
+    },
+    {
+      "item": "Erdbeer-Honig",
+      "rows": 11,
+      "totalAmount": 1467
+    },
+    {
+      "item": "Kornblumen-Honig",
+      "rows": 10,
+      "totalAmount": 6429
+    },
+    {
+      "item": "Schwertlilien-Honig",
+      "rows": 10,
+      "totalAmount": 3717
+    },
+    {
+      "item": "Zitronen-Honig",
+      "rows": 10,
+      "totalAmount": 3098
+    },
+    {
+      "item": "Krokus-Honig",
+      "rows": 9,
+      "totalAmount": 4795
+    },
+    {
+      "item": "Brombeer-Honig",
+      "rows": 9,
+      "totalAmount": 3224
+    },
+    {
+      "item": "Moorlilien-Honig",
+      "rows": 8,
+      "totalAmount": 4027
+    },
+    {
+      "item": "Lavendel-Honig",
+      "rows": 8,
+      "totalAmount": 3706
+    },
+    {
+      "item": "Himbeer-Honig",
+      "rows": 8,
+      "totalAmount": 3126
+    },
+    {
+      "item": "Sonnenblumen-Honig",
+      "rows": 8,
+      "totalAmount": 1395
+    },
+    {
+      "item": "Leberblümchen-Honig",
+      "rows": 7,
+      "totalAmount": 3779
+    },
+    {
+      "item": "Heidenelken-Honig",
+      "rows": 7,
+      "totalAmount": 2741
+    },
+    {
+      "item": "Gerbera-Honig",
+      "rows": 7,
+      "totalAmount": 2721
+    },
+    {
+      "item": "Heidelbeer-Honig",
+      "rows": 7,
+      "totalAmount": 1662
+    }
+  ],
+  "topMissingByRows": [
+    {
+      "item": "Grüner Riegel",
+      "rows": 14,
+      "totalAmount": 344
+    },
+    {
+      "item": "Blumendünger",
+      "rows": 12,
+      "totalAmount": 4660
+    },
+    {
+      "item": "Mischdünger",
+      "rows": 11,
+      "totalAmount": 4300
+    },
+    {
+      "item": "Blumenerde",
+      "rows": 11,
+      "totalAmount": 4220
+    },
+    {
+      "item": "Gemüseerde",
+      "rows": 10,
+      "totalAmount": 3790
+    },
+    {
+      "item": "Gelber Riegel",
+      "rows": 10,
+      "totalAmount": 155
+    },
+    {
+      "item": "Mischerde",
+      "rows": 9,
+      "totalAmount": 3990
+    },
+    {
+      "item": "Bio-Gas",
+      "rows": 8,
+      "totalAmount": 5340
+    },
+    {
+      "item": "Gemüsedünger",
+      "rows": 8,
+      "totalAmount": 2100
+    },
+    {
+      "item": "Bio-Erde",
+      "rows": 7,
+      "totalAmount": 1410
+    },
+    {
+      "item": "Oranger Riegel",
+      "rows": 7,
+      "totalAmount": 80
+    },
+    {
+      "item": "Strom",
+      "rows": 6,
+      "totalAmount": 2690
+    },
+    {
+      "item": "Jaspis",
+      "rows": 6,
+      "totalAmount": 62
+    },
+    {
+      "item": "Lapislazuli",
+      "rows": 6,
+      "totalAmount": 49
+    },
+    {
+      "item": "Tigerauge",
+      "rows": 6,
+      "totalAmount": 12
+    },
+    {
+      "item": "Bio-Dünger",
+      "rows": 5,
+      "totalAmount": 1090
+    },
+    {
+      "item": "Eisen",
+      "rows": 5,
+      "totalAmount": 658
+    },
+    {
+      "item": "Zink",
+      "rows": 5,
+      "totalAmount": 634
+    },
+    {
+      "item": "Kupfer",
+      "rows": 5,
+      "totalAmount": 148
+    },
+    {
+      "item": "Citrin",
+      "rows": 5,
+      "totalAmount": 99
+    },
+    {
+      "item": "Roter Riegel",
+      "rows": 5,
+      "totalAmount": 72
+    },
+    {
+      "item": "Türkis",
+      "rows": 5,
+      "totalAmount": 70
+    },
+    {
+      "item": "Malachit",
+      "rows": 5,
+      "totalAmount": 66
+    },
+    {
+      "item": "Bergkristall",
+      "rows": 5,
+      "totalAmount": 57
+    },
+    {
+      "item": "Wärme",
+      "rows": 4,
+      "totalAmount": 1720
+    },
+    {
+      "item": "Platin",
+      "rows": 4,
+      "totalAmount": 1655
+    },
+    {
+      "item": "Smaragd",
+      "rows": 4,
+      "totalAmount": 106
+    },
+    {
+      "item": "Saphir",
+      "rows": 4,
+      "totalAmount": 79
+    },
+    {
+      "item": "Rubin",
+      "rows": 4,
+      "totalAmount": 77
+    },
+    {
+      "item": "Schein-Calla",
+      "rows": 3,
+      "totalAmount": 6500
+    }
+  ],
+  "topMissingByAmount": [
+    {
+      "item": "Radieschen 1 Tigerauge",
+      "rows": 1,
+      "totalAmount": 40600
+    },
+    {
+      "item": "Heidebeeren",
+      "rows": 1,
+      "totalAmount": 14500
+    },
+    {
+      "item": "Blaubeere",
+      "rows": 1,
+      "totalAmount": 11600
+    },
+    {
+      "item": "Schein-Calla",
+      "rows": 3,
+      "totalAmount": 6500
+    },
+    {
+      "item": "Teichrose",
+      "rows": 3,
+      "totalAmount": 6400
+    },
+    {
+      "item": "Rotkohl 5.500 - Kürbis 2.800 - Bio-Gas 380",
+      "rows": 1,
+      "totalAmount": 5500
+    },
+    {
+      "item": "Bio-Gas",
+      "rows": 8,
+      "totalAmount": 5340
+    },
+    {
+      "item": "Blumendünger",
+      "rows": 12,
+      "totalAmount": 4660
+    },
+    {
+      "item": "Mischdünger",
+      "rows": 11,
+      "totalAmount": 4300
+    },
+    {
+      "item": "Blumenerde",
+      "rows": 11,
+      "totalAmount": 4220
+    },
+    {
+      "item": "Mischerde",
+      "rows": 9,
+      "totalAmount": 3990
+    },
+    {
+      "item": "Gemüseerde",
+      "rows": 10,
+      "totalAmount": 3790
+    },
+    {
+      "item": "Strom",
+      "rows": 6,
+      "totalAmount": 2690
+    },
+    {
+      "item": "Gemüsedünger",
+      "rows": 8,
+      "totalAmount": 2100
+    },
+    {
+      "item": "Wärme",
+      "rows": 4,
+      "totalAmount": 1720
+    },
+    {
+      "item": "Platin",
+      "rows": 4,
+      "totalAmount": 1655
+    },
+    {
+      "item": "Bio-Erde",
+      "rows": 7,
+      "totalAmount": 1410
+    },
+    {
+      "item": "Bio-Dünger",
+      "rows": 5,
+      "totalAmount": 1090
+    },
+    {
+      "item": "Eisen",
+      "rows": 5,
+      "totalAmount": 658
+    },
+    {
+      "item": "Zink",
+      "rows": 5,
+      "totalAmount": 634
+    },
+    {
+      "item": "Olivenbäume",
+      "rows": 1,
+      "totalAmount": 570
+    },
+    {
+      "item": "Gartenabfälle",
+      "rows": 3,
+      "totalAmount": 510
+    },
+    {
+      "item": "Premiumerde",
+      "rows": 3,
+      "totalAmount": 380
+    },
+    {
+      "item": "Grüner Riegel",
+      "rows": 14,
+      "totalAmount": 344
+    },
+    {
+      "item": "Kohle",
+      "rows": 2,
+      "totalAmount": 269
+    },
+    {
+      "item": "Premiumdünger",
+      "rows": 2,
+      "totalAmount": 260
+    },
+    {
+      "item": "Gold",
+      "rows": 1,
+      "totalAmount": 190
+    },
+    {
+      "item": "Gelber Riegel",
+      "rows": 10,
+      "totalAmount": 155
+    },
+    {
+      "item": "Kupfer",
+      "rows": 5,
+      "totalAmount": 148
+    },
+    {
+      "item": "Smaragd",
+      "rows": 4,
+      "totalAmount": 106
+    }
+  ],
+  "topMappedItemsByRows": [
+    {
+      "item": "Brokkoli",
+      "rows": 76,
+      "totalAmount": 828200,
+      "mappedTo": "Brokkoli",
+      "unitPrice": 4.48
+    },
+    {
+      "item": "Blumenkohl",
+      "rows": 67,
+      "totalAmount": 573370,
+      "mappedTo": "Blumenkohl",
+      "unitPrice": 3.78
+    },
+    {
+      "item": "Zucchini",
+      "rows": 62,
+      "totalAmount": 235250,
+      "mappedTo": "Zucchini",
+      "unitPrice": 11.04
+    },
+    {
+      "item": "Spinat",
+      "rows": 61,
+      "totalAmount": 1961200,
+      "mappedTo": "Spinat",
+      "unitPrice": 2.1
+    },
+    {
+      "item": "Paprika",
+      "rows": 60,
+      "totalAmount": 465420,
+      "mappedTo": "Paprika",
+      "unitPrice": 7.32
+    },
+    {
+      "item": "Radieschen",
+      "rows": 59,
+      "totalAmount": 7012200,
+      "mappedTo": "Radieschen",
+      "unitPrice": 0.22
+    },
+    {
+      "item": "Salat",
+      "rows": 58,
+      "totalAmount": 13351000,
+      "mappedTo": "Salat",
+      "unitPrice": 0.08
+    },
+    {
+      "item": "Spargel",
+      "rows": 56,
+      "totalAmount": 298350,
+      "mappedTo": "Spargel",
+      "unitPrice": 7.8
+    },
+    {
+      "item": "Knoblauch",
+      "rows": 54,
+      "totalAmount": 1079327,
+      "mappedTo": "Knoblauch",
+      "unitPrice": 5.1
+    },
+    {
+      "item": "Kartoffel",
+      "rows": 47,
+      "totalAmount": 488950,
+      "mappedTo": "Kartoffel",
+      "unitPrice": 3.6
+    },
+    {
+      "item": "Himbeere",
+      "rows": 46,
+      "totalAmount": 281000,
+      "mappedTo": "Himbeere",
+      "unitPrice": 7.6
+    },
+    {
+      "item": "Kirsche",
+      "rows": 46,
+      "totalAmount": 102800,
+      "mappedTo": "Kirsche",
+      "unitPrice": 41.4
+    },
+    {
+      "item": "Tomate",
+      "rows": 45,
+      "totalAmount": 3030100,
+      "mappedTo": "Tomate",
+      "unitPrice": 0.5
+    },
+    {
+      "item": "Sonnenblume",
+      "rows": 45,
+      "totalAmount": 1035500,
+      "mappedTo": "Sonnenblume",
+      "unitPrice": 1.5
+    },
+    {
+      "item": "Kürbis",
+      "rows": 45,
+      "totalAmount": 126500,
+      "mappedTo": "Kürbis",
+      "unitPrice": 22.8
+    },
+    {
+      "item": "Mirabelle",
+      "rows": 45,
+      "totalAmount": 67000,
+      "mappedTo": "Mirabelle",
+      "unitPrice": 56.28
+    },
+    {
+      "item": "Erdbeere",
+      "rows": 43,
+      "totalAmount": 4087000,
+      "mappedTo": "Erdbeere",
+      "unitPrice": 0.44
+    },
+    {
+      "item": "Rotkohl",
+      "rows": 42,
+      "totalAmount": 290005,
+      "mappedTo": "Rotkohl",
+      "unitPrice": 18
+    },
+    {
+      "item": "Apfel",
+      "rows": 42,
+      "totalAmount": 105700,
+      "mappedTo": "Apfel",
+      "unitPrice": 30.96
+    },
+    {
+      "item": "Brombeere",
+      "rows": 41,
+      "totalAmount": 144100,
+      "mappedTo": "Brombeere",
+      "unitPrice": 30
+    }
+  ]
+}

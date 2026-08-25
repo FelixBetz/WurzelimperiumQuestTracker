@@ -46,6 +46,36 @@ Ablauf: Zahl anpassen → committen → pushen. Auf der gehosteten Seite erschei
 der neue Stand nach dem automatischen Deploy. Lokal (`npm run dev`) genügt
 Speichern der Datei (Hot-Reload).
 
+## Shop-Kosten pro Quest
+
+Die Quest-Anzeige kann zusätzlich den **Shop-Preis der benötigten Pflanzen**
+berechnen (🛒 … wT). Dafür nutzt die App die Datei
+`src/data/shopPrices.json`:
+
+```json
+{
+  "aliases": {
+    "Äpfel": "Apfel",
+    "Karotten": "Karotte"
+  },
+  "prices": {
+    "Salat": 0.08,
+    "Karotte": 0.06
+  }
+}
+```
+
+- Wert = **wT pro Pflanze/Saatgut**
+- Quest-Namen werden automatisch gemappt (z. B. Singular/Plural, Umlaute)
+- Zusätzliche Sonderfälle kannst du über `aliases` hinterlegen
+- Honig-Items gelten als **nicht shop-kaufbar** (nur herstellbar) und werden
+  nicht als fehlender Shop-Preis gezählt
+- Fehlende Preise werden als **Teilwert** markiert
+- Wenn für eine Quest gar kein Preis hinterlegt ist, zeigt die App
+  „keine Shop-Preise“
+- In den Quest-Zeilen wird außerdem je benötigter Pflanze der Einzelpreis
+  (🛒 Betrag) angezeigt
+
 ## Entwicklung
 
 ```bash

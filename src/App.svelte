@@ -189,11 +189,11 @@
 
   .layout {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: clamp(230px, 18vw, 280px) minmax(0, 1fr);
     align-items: start;
     gap: 1.2rem;
     padding: 1.1rem;
-    max-width: 1200px;
+    max-width: 1560px;
     margin: 0 auto;
   }
   .sidebar {
@@ -239,7 +239,7 @@
   }
 
   .foot {
-    max-width: 1200px;
+    max-width: 1560px;
     margin: 1rem auto 2rem;
     padding: 0 1.2rem;
     font-size: 0.8rem;
