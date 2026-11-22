@@ -1,5 +1,5 @@
 <script>
-  import { series, meta, overallProgress } from './lib/data.js';
+  import { series, meta, overallProgress, live, growing } from './lib/data.js';
   import { settings } from './lib/store.js';
   import Sidebar from './lib/components/Sidebar.svelte';
   import SeriesView from './lib/components/SeriesView.svelte';
@@ -24,6 +24,10 @@
   }
 
   const stand = new Date(meta.generatedAt).toLocaleDateString('de-DE');
+  const liveStand = live ? new Date(live.updatedAt).toLocaleString('de-DE') : null;
+  const growingTitle = growing
+    ? ['Wächst gerade:', ...Object.entries(growing).map(([name, n]) => `${name}: ${n}`)].join('\n')
+    : '';
 </script>
 
 <header class="topbar">
@@ -47,7 +51,12 @@
   </div>
 
   <div class="tools">
-    <span class="level" title="Wird in progress.json gesetzt">
+    {#if live}
+      <span class="level live" title={growingTitle || 'Live-Stand vom Bot'}>● Live {liveStand}</span>
+    {:else}
+      <span class="level" title="Live-Stand nicht erreichbar, eingebauter Stand aus progress.json">Offline-Stand</span>
+    {/if}
+    <span class="level" title="Aus dem Live-Stand bzw. progress.json">
       Level {$settings.level ?? '– (kein Filter)'}
     </span>
   </div>
@@ -174,6 +183,9 @@
     align-items: center;
     gap: 0.9rem;
     flex-wrap: wrap;
+  }
+  .level.live {
+    color: var(--accent-strong);
   }
   .level {
     display: inline-flex;

@@ -46,6 +46,18 @@ Ablauf: Zahl anpassen → committen → pushen. Auf der gehosteten Seite erschei
 der neue Stand nach dem automatischen Deploy. Lokal (`npm run dev`) genügt
 Speichern der Datei (Hot-Reload).
 
+## Live-Stand (status.json)
+
+Der Bot ([wurzelimperium-daily](https://github.com/FelixBetz/wurzelimperium-daily)) schreibt bei
+jedem Lauf (alle 15 Minuten) eine `status.json` mit Level, Fortschritt je Reihe,
+Regalbestand und dem, was gerade wächst. Ist die Repo-Variable `STATUS_URL` gesetzt
+(GitHub: Settings › Secrets and variables › Actions › Variables), holt die Seite
+diese Datei beim Öffnen. Werte daraus überschreiben `progress.json` und `stock.json`;
+Reihen, die der Bot nicht auslesen kann, kommen weiter aus `progress.json`. Ist die
+Datei nicht erreichbar, zeigt die Seite „Offline-Stand“ und den eingebauten Stand.
+
+Lokal: `VITE_STATUS_URL=https://... npm run dev`.
+
 ## Regalbestand (stock.json)
 
 `src/data/stock.json` enthält Pflanzen und Honig aus dem Regal. Die Datei wird von

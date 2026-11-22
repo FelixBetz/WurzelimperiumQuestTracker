@@ -32,6 +32,8 @@ jobs:
           VITE_BASE: /${{ github.event.repository.name }}/
           # Datum des Workflow-Starts für die Anzeige im Webinterface.
           VITE_BUILD_DATE: ${{ github.event.head_commit.timestamp || github.run_started_at }}
+          # Live-Stand vom VPS (status.json); Repo-Variable STATUS_URL, leer = nur eingebauter Stand.
+          VITE_STATUS_URL: ${{ vars.STATUS_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

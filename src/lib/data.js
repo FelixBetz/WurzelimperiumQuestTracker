@@ -2,12 +2,42 @@
 import raw from '../data/quests.json';
 import progressData from '../data/progress.json';
 import shopPriceData from '../data/shopPrices.json';
-import stockData from '../data/stock.json';
+import builtStockData from '../data/stock.json';
 
-// Fortschritt = pro Reihe die Anzahl erledigter Quests. Read-only: wird
-// ausschließlich durch Bearbeiten von src/data/progress.json geändert.
+// Live-Stand vom VPS: daily.py schreibt bei jedem Lauf status.json, die Seite
+// holt sie beim Öffnen (URL aus VITE_STATUS_URL). Ohne URL, bei Fehler oder
+// Zeitüberschreitung bleibt es beim eingebauten Stand aus progress.json und
+// stock.json.
+async function loadLive(url) {
+  if (!url) return null;
+  try {
+    const res = await fetch(url, { cache: 'no-cache', signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data?.version !== 1) throw new Error(`unbekannte Version ${data?.version}`);
+    return data;
+  } catch (err) {
+    console.warn('Live-Stand nicht geladen, nutze eingebauten Stand:', err);
+    return null;
+  }
+}
+
+export const live = await loadLive(import.meta.env?.VITE_STATUS_URL);
+
+// Fortschritt = pro Reihe die Anzahl erledigter Quests. Read-only: kommt aus
+// src/data/progress.json; Reihen, die der Bot auslesen kann, überschreibt der
+// Live-Stand.
 // Format: { "seriesId": 12, ... }  ->  Quests 1..12 erledigt, 13 aktuell.
-export const progress = progressData.series ?? {};
+export const progress = { ...(progressData.series ?? {}), ...(live?.series ?? {}) };
+
+export const level = live?.level ?? progressData.level ?? null;
+
+// Was gerade in den Gärten wächst ({ Name: Anzahl }), nur im Live-Stand.
+export const growing = live?.growing ?? null;
+
+// Leerer Live-Bestand = Lesefehler im Bot; dann lieber der eingebaute Stand.
+const stockData =
+  live?.stock && Object.keys(live.stock).length ? { updatedAt: live.updatedAt, items: live.stock } : builtStockData;
 
 // Reihen, die im Spiel noch nicht freigeschaltet sind (unabhängig vom Level).
 // Kommt aus progress.json ("locked": [seriesId, ...]).
