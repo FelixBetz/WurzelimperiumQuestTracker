@@ -54,3 +54,21 @@ export function fmtUntil(iso, now) {
 export function fmtClock(iso) {
   return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }
+
+// Sehr kurz für die Kopfzeile: 465 Tsd, 5,3 Mio, 266 Mio, 1,2 Mrd
+export function fmtShort(n) {
+  const v = Math.abs(n ?? 0);
+  const one = (x) => nf.format(x >= 10 ? Math.round(x) : Math.round(x * 10) / 10);
+  if (v >= 1e9) return `${one(n / 1e9)} Mrd`;
+  if (v >= 1e6) return `${one(n / 1e6)} Mio`;
+  if (v >= 1e4) return `${one(n / 1e3)} Tsd`;
+  return nf.format(Math.round(n ?? 0));
+}
+
+// Dauer kurz: "45 min", "2:31 h", "3 T"
+export function fmtDurationShort(minutes) {
+  const m = Math.max(0, Math.round(minutes));
+  if (m < 60) return `${m} min`;
+  if (m < 48 * 60) return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')} h`;
+  return `${Math.round(m / 1440)} T`;
+}

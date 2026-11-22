@@ -12,7 +12,7 @@
     boosters,
     boosterState,
   } from './lib/data.js';
-  import { fmtCompact, fmtDuration, fmtUntil, fmt } from './lib/format.js';
+  import { fmtDuration, fmtDurationShort, fmtShort, fmtUntil, fmt, fmtClock } from './lib/format.js';
   import { settings } from './lib/store.js';
   import Sidebar from './lib/components/Sidebar.svelte';
   import SeriesView from './lib/components/SeriesView.svelte';
@@ -67,6 +67,8 @@
 
   const stand = new Date(meta.generatedAt).toLocaleDateString('de-DE');
   const liveStand = live ? new Date(live.updatedAt).toLocaleString('de-DE') : null;
+  // Heute reicht die Uhrzeit, sonst mit Datum
+  const sameDay = live ? new Date(live.updatedAt).toDateString() === new Date().toDateString() : false;
   // Uhr für „vor x min“ und Ernte-Countdowns; einmal pro Minute reicht.
   let now = $state(Date.now());
   $effect(() => {
@@ -139,35 +141,37 @@
     <button class:on={view === 'charts'} onclick={() => show('charts')}>Charts</button>
   </div>
 
-  <div class="tools">
+  <!-- Eine schmale Leiste statt einzelner Pillen; Details stehen in den Tooltips. -->
+  <div class="status">
     {#if live}
-      <span class="level live" class:warn={stale} class:partial={!stale && botHealth.errors.length} title={healthTitle}>
-        {#if stale}⚠ Bot seit {fmtDuration(ageMinutes)} nicht gelaufen{:else}● Live {liveStand}{/if}
-        {#if botHealth.errors.length}· {botHealth.errors.length} Lesefehler{/if}
+      <span class="item live" class:warn={stale} class:partial={!stale && botHealth.errors.length} title={healthTitle}>
+        {#if stale}⚠ {fmtDurationShort(ageMinutes)} alt{:else}● {sameDay ? fmtClock(live.updatedAt) : liveStand}{/if}
+        {#if botHealth.errors.length}· ⚠{botHealth.errors.length}{/if}
       </span>
       {#if account?.money != null}
-        <span class="level" title="Wurzeltaler: {fmt(Math.round(account.money))} wT · Coins: {fmt(account.coins ?? 0)}">
-          💰 {fmtCompact(account.money)} wT
+        <span class="item" title="Wurzeltaler: {fmt(Math.round(account.money))} wT · Coins: {fmt(account.coins ?? 0)}">
+          💰 {fmtShort(account.money)}
         </span>
       {/if}
       {#if account?.points != null}
-        <span class="level" title="Punkte: {fmt(account.points)}">⭐ {fmtCompact(account.points)}</span>
+        <span class="item" title="Punkte: {fmt(account.points)}">⭐ {fmtShort(account.points)}</span>
       {/if}
       {#if harvestList.length}
-        <span class="level" title={harvestTitle}>🌾 {harvestList[0][0]} {fmtUntil(harvestList[0][1], now)}</span>
+        <span class="item" title={harvestTitle}>
+          🌾 {fmtUntil(harvestList[0][1], now) === 'fertig'
+            ? 'fertig'
+            : fmtDurationShort((new Date(harvestList[0][1]).getTime() - now) / 60000)}
+        </span>
       {/if}
       {#if nextBooster}
-        <span class="level" class:boost-ready={boostersReady.some((b) => b.worthIt)} title={boosterTitle}>
-          {#if boostersReady.length}✨ {boostersReady.length} Deko{boostersReady.length === 1 ? '' : 's'} bereit{:else}✨ Deko
-            in {fmtDuration(nextBooster.readyIn / 60)}{/if}
+        <span class="item" class:boost-ready={boostersReady.some((b) => b.worthIt)} title={boosterTitle}>
+          ✨ {boostersReady.length ? `${boostersReady.length} bereit` : fmtDurationShort(nextBooster.readyIn / 60)}
         </span>
       {/if}
     {:else}
-      <span class="level" title="Live-Stand nicht erreichbar, eingebauter Stand aus progress.json">Offline-Stand</span>
+      <span class="item" title="Live-Stand nicht erreichbar, eingebauter Stand aus progress.json">Offline</span>
     {/if}
-    <span class="level" title="Aus dem Live-Stand bzw. progress.json">
-      Level {$settings.level ?? '– (kein Filter)'}
-    </span>
+    <span class="item" title="Level, aus dem Live-Stand bzw. progress.json">Lvl {$settings.level ?? '–'}</span>
   </div>
 </header>
 
@@ -296,37 +300,36 @@
     background: var(--accent);
     color: #fff;
   }
-  .tools {
+  .status {
     margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 0.9rem;
-    flex-wrap: wrap;
-  }
-  .level.live {
-    color: var(--accent-strong);
-  }
-  .level.boost-ready {
-    color: var(--accent-strong);
-    border-color: var(--accent);
-  }
-  .level.live.partial {
-    color: var(--warn);
-  }
-  .level.live.warn {
-    color: var(--danger);
-    border-color: var(--danger);
-  }
-  .level {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.85rem;
-    color: var(--muted);
     background: var(--panel-2);
     border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 0.2rem 0.7rem;
+    border-radius: 9px;
+    overflow: hidden;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .item {
+    padding: 0.25rem 0.6rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .item + .item {
+    border-left: 1px solid var(--border);
+  }
+  .item.live,
+  .item.boost-ready {
+    color: var(--accent-strong);
+    font-weight: 600;
+  }
+  .item.live.partial {
+    color: var(--warn);
+  }
+  .item.live.warn {
+    color: var(--danger);
   }
 
   .layout {

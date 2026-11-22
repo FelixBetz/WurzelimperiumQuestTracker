@@ -16,7 +16,7 @@
     boosterState,
   } from '../data.js';
   import { settings } from '../store.js';
-  import { fmt, fmtCompact, fmtUntil, fmtClock, fmtDuration } from '../format.js';
+  import { fmt, fmtCompact, fmtUntil, fmtClock, fmtDuration, fmtDurationShort } from '../format.js';
 
   // Uhr für die Ernte-Countdowns
   let now = $state(Date.now());
@@ -207,7 +207,7 @@
                   <span class="name">{b.name}</span>
                   <span class="meta">G{b.garden} · −{b.reduction / 3600} h</span>
                   <span class="need" class:ok={b.worthIt} class:partial={b.ready && !b.worthIt}>
-                    {#if !b.ready}in {fmtDuration(b.readyIn / 60)}{:else if b.worthIt}bereit · lohnt{:else}bereit · warten{/if}
+                    {#if !b.ready}in {fmtDurationShort(b.readyIn / 60)}{:else if b.worthIt}bereit · lohnt{:else}bereit · warten{/if}
                   </span>
                 </li>
               {/each}
@@ -399,7 +399,7 @@
     font-size: 0.9rem;
   }
   li.boost {
-    grid-template-columns: minmax(0, 1fr) 86px 118px;
+    grid-template-columns: minmax(0, 1fr) 72px 96px;
   }
   .meta {
     font-size: 0.78rem;
