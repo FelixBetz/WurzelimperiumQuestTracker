@@ -9,6 +9,8 @@
   let source = $state('all'); // 'all' | 'bot' | 'outside'
   let onlyQuests = $state(false);
   let expanded = $state({});
+  // Tage auf- und zuklappen; ohne eigene Wahl ist nur der neueste Tag offen
+  let dayOpen = $state({});
 
   loadSibling('log.json')
     .then((log) => (entries = log?.entries ?? []))
@@ -93,18 +95,30 @@
   {:else if days.length === 0}
     <p class="empty">Noch keine Einträge.</p>
   {:else}
-    {#each days as d (d.day)}
-      <h3 class="day">{d.day}</h3>
+    {#each days as d, i (d.day)}
+      {@const dayIsOpen = dayOpen[d.day] ?? i === 0}
+      <button class="day" onclick={() => (dayOpen = { ...dayOpen, [d.day]: !dayIsOpen })} aria-expanded={dayIsOpen}>
+        <span class="chev">{dayIsOpen ? '▾' : '▸'}</span>
+        {d.day}
+        <span class="count">{d.entries.length} {d.entries.length === 1 ? 'Eintrag' : 'Einträge'}</span>
+      </button>
+      {#if dayIsOpen}
       <ul>
         {#each d.entries as e (key(e))}
           {@const stock = stockList(e)}
           {@const open = expanded[key(e)]}
+          {@const details = (e.messages?.length ?? 0) > 0 || stock.length > STOCK_PREVIEW}
           <li class={e.source}>
             <div class="when">
               <span class="time">{fmtClock(e.time)}</span>
               <span class="src" title={e.since ? `seit ${fmtClock(e.since)}` : ''}>
                 {e.source === 'bot' ? '🤖 Bot' : '✋ Außerhalb'}
               </span>
+              {#if details}
+                <button class="toggle" onclick={() => (expanded = { ...expanded, [key(e)]: !open })} aria-expanded={!!open}>
+                  {open ? '▾ weniger' : '▸ Details'}
+                </button>
+              {/if}
             </div>
             <div class="what">
               {#if e.changes.level}
@@ -130,15 +144,24 @@
               {#each open ? stock : stock.slice(0, STOCK_PREVIEW) as [name, delta] (name)}
                 <span class="chip" class:plus={delta > 0} class:minus={delta < 0}>{fmtDelta(delta)} {name}</span>
               {/each}
-              {#if stock.length > STOCK_PREVIEW}
-                <button class="more" onclick={() => (expanded = { ...expanded, [key(e)]: !open })}>
-                  {open ? 'weniger' : `+${fmt(stock.length - STOCK_PREVIEW)} weitere`}
+              {#if stock.length > STOCK_PREVIEW && !open}
+                <button class="more" onclick={() => (expanded = { ...expanded, [key(e)]: true })}>
+                  +{fmt(stock.length - STOCK_PREVIEW)} weitere
                 </button>
               {/if}
             </div>
+            {#if open && e.messages?.length}
+              <!-- der genaue Text, den der Bot in diesem Lauf gemeldet hat -->
+              <ol class="messages">
+                {#each e.messages as m, j (j)}
+                  <li class={m.level}>{m.text}{#if m.count > 1}<span class="times"> ×{m.count}</span>{/if}</li>
+                {/each}
+              </ol>
+            {/if}
           </li>
         {/each}
       </ul>
+      {/if}
     {/each}
   {/if}
 </div>
@@ -191,9 +214,23 @@
     text-align: center;
   }
   .day {
-    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
     margin: 1.2rem 0 0.5rem;
+    padding: 0;
+    border: none;
+    background: none;
     color: var(--muted);
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+  }
+  .day .count {
+    font-size: 0.75rem;
+    font-weight: 500;
   }
   ul {
     list-style: none;
@@ -203,7 +240,7 @@
     flex-direction: column;
     gap: 0.5rem;
   }
-  li {
+  ul > li {
     display: grid;
     grid-template-columns: 7.5rem minmax(0, 1fr);
     gap: 0.8rem;
@@ -213,11 +250,45 @@
     border-left: 3px solid var(--border);
     border-radius: var(--radius);
   }
-  li.outside {
+  ul > li.outside {
     border-left-color: var(--warn);
   }
-  li.bot {
+  ul > li.bot {
     border-left-color: var(--accent);
+  }
+  .toggle {
+    align-self: flex-start;
+    margin-top: 0.2rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  .messages {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0.5rem 0.7rem;
+    list-style: none;
+    background: var(--panel-2);
+    border-radius: 8px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    overflow-x: auto;
+  }
+  .messages li {
+    white-space: pre-wrap;
+  }
+  .messages li.warning {
+    color: var(--warn);
+  }
+  .messages li.error {
+    color: var(--danger);
+  }
+  .messages .times {
+    color: var(--muted);
   }
   .when {
     display: flex;
@@ -274,7 +345,7 @@
     text-decoration: underline;
   }
   @media (max-width: 520px) {
-    li {
+    ul > li {
       grid-template-columns: 1fr;
       gap: 0.3rem;
     }
