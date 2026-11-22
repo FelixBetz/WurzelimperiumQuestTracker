@@ -1,7 +1,28 @@
 <script>
-  import { stock, stockGroup, stockDemand, series, progress, currentQuest, openQuests, isLocked } from '../data.js';
+  import {
+    stock,
+    stockGroup,
+    stockDemand,
+    stockUnitPrice,
+    series,
+    progress,
+    currentQuest,
+    openQuests,
+    isLocked,
+    harvestAt,
+    growing,
+    account,
+  } from '../data.js';
   import { settings } from '../store.js';
-  import { fmt } from '../format.js';
+  import { fmt, fmtCompact, fmtUntil, fmtClock } from '../format.js';
+
+  // Uhr für die Ernte-Countdowns
+  let now = $state(Date.now());
+  $effect(() => {
+    const timer = setInterval(() => (now = Date.now()), 60_000);
+    return () => clearInterval(timer);
+  });
+  const harvestList = Object.entries(harvestAt).sort((a, b) => a[1].localeCompare(b[1]));
 
   // Karten je Gruppe; 'tank' ist der Honig, der noch im Bienengarten liegt und
   // erst abgefüllt werden muss (für Quests zählt nur das Regal).
@@ -82,6 +103,20 @@
     return out;
   });
 
+  // Was das Fehlende im Shop kosten würde; Gegenstände ohne Shop-Preis (z. B. Honig) zählen extra.
+  let cost = $derived.by(() => {
+    let total = 0;
+    let unpriced = 0;
+    for (const r of shelf.map(withDemand)) {
+      if (!r.missing) continue;
+      const price = stockUnitPrice(r.name);
+      if (price == null) unpriced += 1;
+      else total += price * r.missing;
+    }
+    return { total, unpriced };
+  });
+  let affordable = $derived(account?.money != null && account.money >= cost.total);
+
   // Logarithmisch, damit 17 Äpfel neben 428.100 Salat noch sichtbar sind.
   function barWidth(amount, max) {
     return amount > 0 ? Math.max(3, (Math.log10(amount + 1) / Math.log10(max + 1)) * 100) : 0;
@@ -122,6 +157,15 @@
     <span class="pill ok">✓ {summary.ok} reichen</span>
     <span class="pill partial">◐ {summary.partial} teilweise</span>
     <span class="pill none">✗ {summary.none} fehlen</span>
+    {#if cost.total > 0}
+      <span
+        class="pill cost"
+        class:ok={affordable}
+        title="Shop-Preis der fehlenden Mengen{cost.unpriced ? `; ${cost.unpriced} Gegenstände ohne Shop-Preis nicht mitgerechnet` : ''}{account?.money != null ? `\nKontostand: ${fmt(Math.round(account.money))} wT` : ''}"
+      >
+        🛒 Fehlendes ≈ {fmtCompact(cost.total)} wT{account?.money != null ? ` · Konto ${fmtCompact(account.money)} wT` : ''}
+      </span>
+    {/if}
     <span class="stand">
       {#if stock.live}Live-Stand {stand}{:else if stand}eingebauter Stand {stand}{:else}eingebauter Stand (ohne Bestand){/if}
     </span>
@@ -131,6 +175,29 @@
     <p class="empty">Nichts gefunden.</p>
   {:else}
     <div class="grid">
+      {#if harvestList.length && !query && !onlyNeeded}
+        <section class="card">
+          <button class="head" onclick={() => toggle('growing')} aria-expanded={!collapsed.growing}>
+            <span class="icon">🌾</span>
+            <span class="label">Wächst gerade</span>
+            <span class="count">{harvestList.length}</span>
+            <span class="chev">{collapsed.growing ? '▸' : '▾'}</span>
+          </button>
+          {#if !collapsed.growing}
+            <ul>
+              {#each harvestList as [name, at] (name)}
+                <li class="grow">
+                  <span class="name">{name}</span>
+                  <span class="amount">{fmt(growing?.[name] ?? 0)}</span>
+                  <span class="need" class:ok={fmtUntil(at, now) === 'fertig'} title="Erntereif um {fmtClock(at)}">
+                    {fmtUntil(at, now)}
+                  </span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </section>
+      {/if}
       {#each cards as c (c.key)}
         <section class="card">
           <button class="head" onclick={() => toggle(c.key)} aria-expanded={!collapsed[c.key]}>
@@ -290,6 +357,15 @@
     gap: 0.5rem;
     padding: 0.32rem 0.9rem;
     font-size: 0.9rem;
+  }
+  li.grow {
+    grid-template-columns: minmax(0, 1fr) 78px 110px;
+  }
+  .pill.cost {
+    color: var(--warn);
+  }
+  .pill.cost.ok {
+    color: var(--accent-strong);
   }
   li + li {
     border-top: 1px solid var(--border);

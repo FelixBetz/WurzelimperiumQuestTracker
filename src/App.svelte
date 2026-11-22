@@ -1,5 +1,6 @@
 <script>
-  import { series, seriesById, meta, overallProgress, live, growing } from './lib/data.js';
+  import { series, seriesById, meta, overallProgress, live, growing, botHealth, account, harvestAt } from './lib/data.js';
+  import { fmtCompact, fmtDuration, fmtUntil, fmt } from './lib/format.js';
   import { settings } from './lib/store.js';
   import Sidebar from './lib/components/Sidebar.svelte';
   import SeriesView from './lib/components/SeriesView.svelte';
@@ -7,11 +8,19 @@
   import NextQuests from './lib/components/NextQuests.svelte';
   import Charts from './lib/components/Charts.svelte';
   import Stock from './lib/components/Stock.svelte';
+  import Log from './lib/components/Log.svelte';
 
   // Ansicht und Reihe stehen im Hash der URL (#/bestand, #/reihen/bonsai), damit
   // jeder Tab einen Link hat und Zurück/Vor im Browser funktioniert. Hash statt
   // Pfad, weil GitHub Pages unbekannte Pfade nicht auf index.html umleitet.
-  const VIEWS = { reihen: 'series', naechste: 'next', empfehlungen: 'reco', bestand: 'stock', charts: 'charts' };
+  const VIEWS = {
+    reihen: 'series',
+    naechste: 'next',
+    empfehlungen: 'reco',
+    bestand: 'stock',
+    protokoll: 'log',
+    charts: 'charts',
+  };
   const SLUGS = Object.fromEntries(Object.entries(VIEWS).map(([slug, v]) => [v, slug]));
 
   function parseHash(hash) {
@@ -22,7 +31,7 @@
   let route = $state(parseHash(location.hash));
   // Zuletzt gewählte Reihe bleibt erhalten, wenn man zwischen den Tabs wechselt.
   let lastSeriesId = $state(route.id ?? series[0].id);
-  let view = $derived(route.view); // 'series' | 'next' | 'reco' | 'stock' | 'charts'
+  let view = $derived(route.view); // 'series' | 'next' | 'reco' | 'stock' | 'log' | 'charts'
   let selectedId = $derived(route.id ?? lastSeriesId);
 
   function onHashChange() {
@@ -46,9 +55,37 @@
 
   const stand = new Date(meta.generatedAt).toLocaleDateString('de-DE');
   const liveStand = live ? new Date(live.updatedAt).toLocaleString('de-DE') : null;
-  const growingTitle = growing
-    ? ['Wächst gerade:', ...Object.entries(growing).map(([name, n]) => `${name}: ${n}`)].join('\n')
-    : '';
+  // Uhr für „vor x min“ und Ernte-Countdowns; einmal pro Minute reicht.
+  let now = $state(Date.now());
+  $effect(() => {
+    const timer = setInterval(() => (now = Date.now()), 60_000);
+    return () => clearInterval(timer);
+  });
+
+  // Der Bot läuft alle 15 bis 20 Minuten; nach 40 Minuten ohne neuen Stand stimmt etwas nicht.
+  const STALE_MINUTES = 40;
+  let ageMinutes = $derived(botHealth ? (now - new Date(botHealth.updatedAt).getTime()) / 60000 : 0);
+  let stale = $derived(ageMinutes > STALE_MINUTES);
+  let healthTitle = $derived(
+    botHealth
+      ? [
+          `Letzter Lauf: ${liveStand} (vor ${fmtDuration(ageMinutes)})`,
+          botHealth.codeVersion ? `Code: ${botHealth.codeVersion}` : null,
+          botHealth.errors.length ? `Lesefehler:\n${botHealth.errors.join('\n')}` : 'Keine Lesefehler',
+        ]
+          .filter(Boolean)
+          .join('\n')
+      : '',
+  );
+
+  // Nächste Ernte: früheste Pflanze; im Tooltip alle mit Anzahl.
+  const harvestList = Object.entries(harvestAt).sort((a, b) => a[1].localeCompare(b[1]));
+  let harvestTitle = $derived(
+    [
+      'Wächst gerade:',
+      ...harvestList.map(([name, at]) => `${name} (${fmt(growing?.[name] ?? 0)}): ${fmtUntil(at, now)}`),
+    ].join('\n'),
+  );
 </script>
 
 <svelte:window onhashchange={onHashChange} />
@@ -71,12 +108,27 @@
     <button class:on={view === 'next'} onclick={() => show('next')}>Nächste Quests</button>
     <button class:on={view === 'reco'} onclick={() => show('reco')}>Empfehlungen</button>
     <button class:on={view === 'stock'} onclick={() => show('stock')}>Bestand</button>
+    <button class:on={view === 'log'} onclick={() => show('log')}>Protokoll</button>
     <button class:on={view === 'charts'} onclick={() => show('charts')}>Charts</button>
   </div>
 
   <div class="tools">
     {#if live}
-      <span class="level live" title={growingTitle || 'Live-Stand vom Bot'}>● Live {liveStand}</span>
+      <span class="level live" class:warn={stale} class:partial={!stale && botHealth.errors.length} title={healthTitle}>
+        {#if stale}⚠ Bot seit {fmtDuration(ageMinutes)} nicht gelaufen{:else}● Live {liveStand}{/if}
+        {#if botHealth.errors.length}· {botHealth.errors.length} Lesefehler{/if}
+      </span>
+      {#if account?.money != null}
+        <span class="level" title="Wurzeltaler: {fmt(Math.round(account.money))} wT · Coins: {fmt(account.coins ?? 0)}">
+          💰 {fmtCompact(account.money)} wT
+        </span>
+      {/if}
+      {#if account?.points != null}
+        <span class="level" title="Punkte: {fmt(account.points)}">⭐ {fmtCompact(account.points)}</span>
+      {/if}
+      {#if harvestList.length}
+        <span class="level" title={harvestTitle}>🌾 {harvestList[0][0]} {fmtUntil(harvestList[0][1], now)}</span>
+      {/if}
     {:else}
       <span class="level" title="Live-Stand nicht erreichbar, eingebauter Stand aus progress.json">Offline-Stand</span>
     {/if}
@@ -124,6 +176,11 @@
   <main class="content wide">
     <h2 class="reco-title">Regalbestand</h2>
     <Stock />
+  </main>
+{:else if view === 'log'}
+  <main class="content wide">
+    <h2 class="reco-title">Protokoll</h2>
+    <Log />
   </main>
 {:else}
   <main class="content wide">
@@ -215,6 +272,13 @@
   }
   .level.live {
     color: var(--accent-strong);
+  }
+  .level.live.partial {
+    color: var(--warn);
+  }
+  .level.live.warn {
+    color: var(--danger);
+    border-color: var(--danger);
   }
   .level {
     display: inline-flex;

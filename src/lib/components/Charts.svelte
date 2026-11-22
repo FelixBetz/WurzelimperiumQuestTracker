@@ -10,6 +10,7 @@
   } from '../data.js';
   import { settings } from '../store.js';
   import { fmt } from '../format.js';
+  import History from './History.svelte';
 
   function notReady(s) {
     const lvl = $settings.level;
@@ -59,6 +60,8 @@
       <span class="tsub">Punkte aus erledigten Quests</span>
     </div>
   </div>
+
+  <History />
 
   <section class="panel">
     <h3>Gesamtfortschritt</h3>

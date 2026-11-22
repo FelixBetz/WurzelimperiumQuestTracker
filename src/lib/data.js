@@ -22,7 +22,27 @@ async function loadLive(url) {
   }
 }
 
-export const live = await loadLive(import.meta.env?.VITE_STATUS_URL);
+const STATUS_URL = import.meta.env?.VITE_STATUS_URL;
+export const live = await loadLive(STATUS_URL);
+
+// Weitere Dateien neben status.json (Protokoll, Verlauf); werden erst im jeweiligen Tab geladen.
+export async function loadSibling(file) {
+  if (!STATUS_URL) return null;
+  const res = await fetch(new URL(file, STATUS_URL), { cache: 'no-cache', signal: AbortSignal.timeout(6000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// Zustand des Bots für die Kopfzeile: Wann lief er zuletzt, mit welchem Code, gab es Lesefehler?
+export const botHealth = live
+  ? { updatedAt: live.updatedAt, codeVersion: live.codeVersion ?? null, errors: live.errors ?? [] }
+  : null;
+
+// Konto aus dem Live-Stand: Wurzeltaler (money), Coins, Punkte.
+export const account = live ? { money: live.money ?? null, coins: live.coins ?? null, points: live.points ?? null } : null;
+
+// Früheste Ernte je Pflanze ({ Name: ISO-Zeit }), nur im Live-Stand.
+export const harvestAt = live?.harvestAt ?? {};
 
 // Fortschritt = pro Reihe die Anzahl erledigter Quests. Read-only: kommt aus
 // src/data/progress.json; Reihen, die der Bot auslesen kann, überschreibt der
@@ -56,8 +76,13 @@ export function stockGroup(name) {
 }
 
 // Reihen, die im Spiel noch nicht freigeschaltet sind (unabhängig vom Level).
-// Kommt aus progress.json ("locked": [seriesId, ...]).
+// Kommt aus progress.json ("locked": [seriesId, ...]); für die Reihen, die der Bot
+// kennt (live.unlocked: { seriesId: true/false }), entscheidet der Live-Stand.
 export const lockedIds = new Set(progressData.locked ?? []);
+for (const [id, unlocked] of Object.entries(live?.unlocked ?? {})) {
+  if (unlocked) lockedIds.delete(id);
+  else lockedIds.add(id);
+}
 export function isLocked(s) {
   return lockedIds.has(s.id);
 }
@@ -237,6 +262,12 @@ const shopPriceLookup = (() => {
 
   return out;
 })();
+
+// Shop-Preis je Stück für einen Regal-Gegenstand, null wenn er nicht im Shop zu kaufen ist.
+export function stockUnitPrice(name) {
+  if (isCraftOnlyItem(name)) return null;
+  return resolveShopPrice(name)?.price ?? null;
+}
 
 function resolveShopPrice(itemName) {
   for (const candidate of itemNameCandidates(itemName)) {

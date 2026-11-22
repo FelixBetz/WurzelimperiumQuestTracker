@@ -56,6 +56,13 @@ diese Datei beim Öffnen. Werte daraus überschreiben `progress.json` und `stock
 Reihen, die der Bot nicht auslesen kann, kommen weiter aus `progress.json`. Ist die
 Datei nicht erreichbar, zeigt die Seite „Offline-Stand“ und den eingebauten Stand.
 
+Neben `status.json` liegen `log.json` (Tab „Protokoll“: was der Bot in einem Lauf geändert
+hat und was sich zwischen zwei Läufen von Hand getan hat, 14 Tage) und `history.json`
+(Charts, „Verlauf“: ein Eintrag pro Tag). Die Kopfzeile warnt, wenn der letzte Lauf
+länger als 40 Minuten her ist, und zeigt Wurzeltaler, Punkte und die nächste Ernte.
+Gesperrte Reihen, die der Bot kennt (Wassergarten, Recyclinghof usw.), schaltet der
+Live-Stand frei; der Rest bleibt in `progress.json` unter `locked`.
+
 Lokal: `VITE_STATUS_URL=https://... npm run dev`.
 
 ## Regalbestand (stock.json)
