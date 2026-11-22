@@ -39,6 +39,13 @@ export const growing = live?.growing ?? null;
 const stockData =
   live?.stock && Object.keys(live.stock).length ? { updatedAt: live.updatedAt, items: live.stock } : builtStockData;
 
+// Regalbestand für den Tab „Bestand“: { items: { Name: Menge }, updatedAt, live }.
+export const stock = {
+  items: stockData.items ?? {},
+  updatedAt: stockData.updatedAt ?? null,
+  live: stockData !== builtStockData,
+};
+
 // Reihen, die im Spiel noch nicht freigeschaltet sind (unabhängig vom Level).
 // Kommt aus progress.json ("locked": [seriesId, ...]).
 export const lockedIds = new Set(progressData.locked ?? []);

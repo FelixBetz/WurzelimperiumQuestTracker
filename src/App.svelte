@@ -6,8 +6,9 @@
   import Recommendations from './lib/components/Recommendations.svelte';
   import NextQuests from './lib/components/NextQuests.svelte';
   import Charts from './lib/components/Charts.svelte';
+  import Stock from './lib/components/Stock.svelte';
 
-  let view = $state('series'); // 'series' | 'next' | 'reco' | 'charts'
+  let view = $state('series'); // 'series' | 'next' | 'reco' | 'stock' | 'charts'
   let selectedId = $state(series[0].id);
   let sidebarOpen = $state(false);
 
@@ -47,6 +48,7 @@
     <button class:on={view === 'series'} onclick={() => (view = 'series')}>Reihen</button>
     <button class:on={view === 'next'} onclick={() => (view = 'next')}>Nächste Quests</button>
     <button class:on={view === 'reco'} onclick={() => (view = 'reco')}>Empfehlungen</button>
+    <button class:on={view === 'stock'} onclick={() => (view = 'stock')}>Bestand</button>
     <button class:on={view === 'charts'} onclick={() => (view = 'charts')}>Charts</button>
   </div>
 
@@ -95,6 +97,11 @@
   <main class="content wide">
     <h2 class="reco-title">Was soll ich anpflanzen / sammeln?</h2>
     <Recommendations />
+  </main>
+{:else if view === 'stock'}
+  <main class="content wide">
+    <h2 class="reco-title">Regalbestand</h2>
+    <Stock />
   </main>
 {:else}
   <main class="content wide">
