@@ -88,9 +88,9 @@
 
   // Erklärung, die sich aus Schritt und Einstellungen ergibt
   function stepNote(e, s) {
-    const text = (s.messages ?? []).map((m) => m.text).join('\n');
-    if (s.key === 'infinity' && /Zu wenig WT/.test(text) && e.settings?.infinityLimit) {
-      return `Übersprungen: Kontostand unter der Grenze von ${fmt(e.settings.infinityLimit)} wT (infinityQuestLimit in der Notiz)`;
+    // nur wenn eine Quest offen war und das Geld unter der Grenze lag (der Bot prüft beides)
+    if (s.key === 'infinity' && s.infinity) {
+      return `Quest ${s.infinity.quest} offen, aber übersprungen: Kontostand ${fmt(Math.round(s.infinity.money))} wT liegt unter der Grenze von ${fmt(s.infinity.limit)} wT (infinityQuestLimit in der Notiz)`;
     }
     if (s.key === 'park' && e.actions?.parkRenewed && s.changes?.money != null) {
       const cost = s.changes.money - (e.actions.parkMoney ?? 0);
@@ -262,8 +262,8 @@
             </div>
             {#if open && e.steps?.length}
               <!-- je Schritt: was sich geändert hat und was der Bot dabei gemeldet hat -->
-              {@const shown = e.steps.filter((s) => s.changes || s.messages || s.error)}
-              {@const quiet = e.steps.filter((s) => !(s.changes || s.messages || s.error))}
+              {@const shown = e.steps.filter((s) => s.changes || s.messages || s.error || s.infinity)}
+              {@const quiet = e.steps.filter((s) => !(s.changes || s.messages || s.error || s.infinity))}
               <!-- Klicks im Detailbereich klappen die Karte nicht zu (lesen, markieren, Tooltips) -->
               <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
               <div class="steps" onclick={(ev) => ev.stopPropagation()}>
