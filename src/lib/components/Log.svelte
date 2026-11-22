@@ -131,9 +131,10 @@
       </button>
       {#if dayIsOpen}
       <ul>
-        {#each d.entries as e (key(e))}
+        {#each d.entries as e, j (key(e))}
           {@const stock = stockList(e)}
-          {@const open = expanded[key(e)]}
+          <!-- ohne eigene Wahl ist der neueste Eintrag der Ansicht aufgeklappt -->
+          {@const open = expanded[key(e)] ?? (i === 0 && j === 0)}
           {@const details = (e.messages?.length ?? 0) > 0 || stock.length > STOCK_PREVIEW}
           <li class={e.source}>
             <div class="when">
