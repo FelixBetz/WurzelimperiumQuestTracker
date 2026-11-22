@@ -1,5 +1,5 @@
 <script>
-  import { series, meta, overallProgress, live, growing } from './lib/data.js';
+  import { series, seriesById, meta, overallProgress, live, growing } from './lib/data.js';
   import { settings } from './lib/store.js';
   import Sidebar from './lib/components/Sidebar.svelte';
   import SeriesView from './lib/components/SeriesView.svelte';
@@ -8,20 +8,40 @@
   import Charts from './lib/components/Charts.svelte';
   import Stock from './lib/components/Stock.svelte';
 
-  let view = $state('series'); // 'series' | 'next' | 'reco' | 'stock' | 'charts'
-  let selectedId = $state(series[0].id);
-  let sidebarOpen = $state(false);
+  // Ansicht und Reihe stehen im Hash der URL (#/bestand, #/reihen/bonsai), damit
+  // jeder Tab einen Link hat und Zurück/Vor im Browser funktioniert. Hash statt
+  // Pfad, weil GitHub Pages unbekannte Pfade nicht auf index.html umleitet.
+  const VIEWS = { reihen: 'series', naechste: 'next', empfehlungen: 'reco', bestand: 'stock', charts: 'charts' };
+  const SLUGS = Object.fromEntries(Object.entries(VIEWS).map(([slug, v]) => [v, slug]));
 
-  let selectedSeries = $derived(series.find((s) => s.id === selectedId) ?? series[0]);
-
-  function pickSeries(id) {
-    selectedId = id;
-    sidebarOpen = false;
+  function parseHash(hash) {
+    const [slug, id] = hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
+    return { view: VIEWS[slug] ?? 'series', id: seriesById.has(id) ? id : null };
   }
 
-  function jumpToSeries(id) {
-    pickSeries(id);
-    view = 'series';
+  let route = $state(parseHash(location.hash));
+  // Zuletzt gewählte Reihe bleibt erhalten, wenn man zwischen den Tabs wechselt.
+  let lastSeriesId = $state(route.id ?? series[0].id);
+  let view = $derived(route.view); // 'series' | 'next' | 'reco' | 'stock' | 'charts'
+  let selectedId = $derived(route.id ?? lastSeriesId);
+
+  function onHashChange() {
+    route = parseHash(location.hash);
+    if (route.id) lastSeriesId = route.id;
+  }
+  let sidebarOpen = $state(false);
+
+  let selectedSeries = $derived(seriesById.get(selectedId) ?? series[0]);
+
+  // Neuer Hash = neuer Eintrag im Verlauf; hashchange setzt dann route.
+  function show(v) {
+    if (v === 'series') pickSeries(lastSeriesId);
+    else location.hash = `#/${SLUGS[v]}`;
+  }
+
+  function pickSeries(id) {
+    location.hash = `#/reihen/${encodeURIComponent(id)}`;
+    sidebarOpen = false;
   }
 
   const stand = new Date(meta.generatedAt).toLocaleDateString('de-DE');
@@ -30,6 +50,8 @@
     ? ['Wächst gerade:', ...Object.entries(growing).map(([name, n]) => `${name}: ${n}`)].join('\n')
     : '';
 </script>
+
+<svelte:window onhashchange={onHashChange} />
 
 <header class="topbar">
   <div class="brand">
@@ -45,11 +67,11 @@
   </div>
 
   <div class="tabs">
-    <button class:on={view === 'series'} onclick={() => (view = 'series')}>Reihen</button>
-    <button class:on={view === 'next'} onclick={() => (view = 'next')}>Nächste Quests</button>
-    <button class:on={view === 'reco'} onclick={() => (view = 'reco')}>Empfehlungen</button>
-    <button class:on={view === 'stock'} onclick={() => (view = 'stock')}>Bestand</button>
-    <button class:on={view === 'charts'} onclick={() => (view = 'charts')}>Charts</button>
+    <button class:on={view === 'series'} onclick={() => show('series')}>Reihen</button>
+    <button class:on={view === 'next'} onclick={() => show('next')}>Nächste Quests</button>
+    <button class:on={view === 'reco'} onclick={() => show('reco')}>Empfehlungen</button>
+    <button class:on={view === 'stock'} onclick={() => show('stock')}>Bestand</button>
+    <button class:on={view === 'charts'} onclick={() => show('charts')}>Charts</button>
   </div>
 
   <div class="tools">
@@ -91,7 +113,7 @@
 {:else if view === 'next'}
   <main class="content wide">
     <h2 class="reco-title">Nächste Quests</h2>
-    <NextQuests onselect={jumpToSeries} />
+    <NextQuests onselect={pickSeries} />
   </main>
 {:else if view === 'reco'}
   <main class="content wide">
