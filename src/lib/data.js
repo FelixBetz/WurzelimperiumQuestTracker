@@ -44,6 +44,18 @@ export const account = live ? { money: live.money ?? null, coins: live.coins ?? 
 // Früheste Ernte je Pflanze ({ Name: ISO-Zeit }), nur im Live-Stand.
 export const harvestAt = live?.harvestAt ?? {};
 
+// Wachstums-Dekos (Booster) aus dem Live-Stand: [{ garden, name, reduction, cooldown, readyAt, plants,
+// minGrowLeft, ... }], Zeiten in Sekunden. boosterState rechnet „bereit“ und „lohnt“ für die aktuelle Uhrzeit
+// nach, weil die Seite auch eine Weile nach dem letzten Lauf offen sein kann.
+export const boosters = live?.boosters ?? [];
+export function boosterState(b, now) {
+  const elapsed = (now - new Date(live.updatedAt).getTime()) / 1000;
+  const readyIn = Math.max(0, (new Date(b.readyAt).getTime() - now) / 1000);
+  const growLeft = b.minGrowLeft == null ? null : b.minGrowLeft - elapsed;
+  const ready = readyIn === 0;
+  return { ready, readyIn, growLeft, worthIt: ready && b.plants > 0 && growLeft != null && growLeft >= b.reduction };
+}
+
 // Fortschritt = pro Reihe die Anzahl erledigter Quests. Read-only: kommt aus
 // src/data/progress.json; Reihen, die der Bot auslesen kann, überschreibt der
 // Live-Stand.

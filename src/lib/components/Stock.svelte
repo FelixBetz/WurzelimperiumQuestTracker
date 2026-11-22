@@ -12,9 +12,11 @@
     harvestAt,
     growing,
     account,
+    boosters,
+    boosterState,
   } from '../data.js';
   import { settings } from '../store.js';
-  import { fmt, fmtCompact, fmtUntil, fmtClock } from '../format.js';
+  import { fmt, fmtCompact, fmtUntil, fmtClock, fmtDuration } from '../format.js';
 
   // Uhr für die Ernte-Countdowns
   let now = $state(Date.now());
@@ -23,6 +25,21 @@
     return () => clearInterval(timer);
   });
   const harvestList = Object.entries(harvestAt).sort((a, b) => a[1].localeCompare(b[1]));
+
+  // Wachstums-Dekos nach Garten, darin nach Bereitschaft
+  let boosterRows = $derived(
+    boosters
+      .map((b) => ({ ...b, ...boosterState(b, now) }))
+      .sort((a, b) => a.garden - b.garden || a.readyIn - b.readyIn),
+  );
+
+  function boosterTitle(b) {
+    const base = `Garten ${b.garden}: spart ${b.reduction / 3600} h, danach ${b.cooldown / 3600} h Abklingzeit`;
+    if (!b.ready) return `${base}\nWieder bereit um ${new Date(b.readyAt).toLocaleString('de-DE')}`;
+    if (b.worthIt) return `${base}\nAlle ${b.plants} Pflanzen wachsen noch mindestens ${b.reduction / 3600} h`;
+    if (!b.plants) return `${base}\nIm Garten wächst gerade nichts`;
+    return `${base}\nKürzeste Restzeit im Garten: ${fmtDuration(b.growLeft / 60)}; erst ab ${b.reduction / 3600} h geht nichts verloren`;
+  }
 
   // Karten je Gruppe; 'tank' ist der Honig, der noch im Bienengarten liegt und
   // erst abgefüllt werden muss (für Quests zählt nur das Regal).
@@ -175,6 +192,29 @@
     <p class="empty">Nichts gefunden.</p>
   {:else}
     <div class="grid">
+      {#if boosterRows.length && !query && !onlyNeeded}
+        <section class="card">
+          <button class="head" onclick={() => toggle('boosters')} aria-expanded={!collapsed.boosters}>
+            <span class="icon">✨</span>
+            <span class="label">Wachstums-Dekos</span>
+            <span class="count">{boosterRows.length}</span>
+            <span class="chev">{collapsed.boosters ? '▸' : '▾'}</span>
+          </button>
+          {#if !collapsed.boosters}
+            <ul>
+              {#each boosterRows as b (`${b.garden}:${b.field}`)}
+                <li class="boost" title={boosterTitle(b)}>
+                  <span class="name">{b.name}</span>
+                  <span class="meta">G{b.garden} · −{b.reduction / 3600} h</span>
+                  <span class="need" class:ok={b.worthIt} class:partial={b.ready && !b.worthIt}>
+                    {#if !b.ready}in {fmtDuration(b.readyIn / 60)}{:else if b.worthIt}bereit · lohnt{:else}bereit · warten{/if}
+                  </span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </section>
+      {/if}
       {#if harvestList.length && !query && !onlyNeeded}
         <section class="card">
           <button class="head" onclick={() => toggle('growing')} aria-expanded={!collapsed.growing}>
@@ -357,6 +397,18 @@
     gap: 0.5rem;
     padding: 0.32rem 0.9rem;
     font-size: 0.9rem;
+  }
+  li.boost {
+    grid-template-columns: minmax(0, 1fr) 86px 118px;
+  }
+  .meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .need.partial {
+    color: var(--warn);
   }
   li.grow {
     grid-template-columns: minmax(0, 1fr) 78px 110px;

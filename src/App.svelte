@@ -1,5 +1,17 @@
 <script>
-  import { series, seriesById, meta, overallProgress, live, growing, botHealth, account, harvestAt } from './lib/data.js';
+  import {
+    series,
+    seriesById,
+    meta,
+    overallProgress,
+    live,
+    growing,
+    botHealth,
+    account,
+    harvestAt,
+    boosters,
+    boosterState,
+  } from './lib/data.js';
   import { fmtCompact, fmtDuration, fmtUntil, fmt } from './lib/format.js';
   import { settings } from './lib/store.js';
   import Sidebar from './lib/components/Sidebar.svelte';
@@ -86,6 +98,21 @@
       ...harvestList.map(([name, at]) => `${name} (${fmt(growing?.[name] ?? 0)}): ${fmtUntil(at, now)}`),
     ].join('\n'),
   );
+
+  // Wachstums-Dekos: wie viele sind bereit, sonst wann ist die nächste so weit.
+  let boosterStates = $derived(boosters.map((b) => ({ ...b, ...boosterState(b, now) })));
+  let boostersReady = $derived(boosterStates.filter((b) => b.ready));
+  let nextBooster = $derived([...boosterStates].sort((a, b) => a.readyIn - b.readyIn)[0]);
+  let boosterTitle = $derived(
+    [
+      'Wachstums-Dekos:',
+      ...boosterStates.map(
+        (b) =>
+          `Garten ${b.garden}, ${b.name} (spart ${b.reduction / 3600} h): ` +
+          (b.ready ? (b.worthIt ? 'bereit, lohnt' : 'bereit, lohnt noch nicht') : `in ${fmtDuration(b.readyIn / 60)}`),
+      ),
+    ].join('\n'),
+  );
 </script>
 
 <svelte:window onhashchange={onHashChange} />
@@ -128,6 +155,12 @@
       {/if}
       {#if harvestList.length}
         <span class="level" title={harvestTitle}>🌾 {harvestList[0][0]} {fmtUntil(harvestList[0][1], now)}</span>
+      {/if}
+      {#if nextBooster}
+        <span class="level" class:boost-ready={boostersReady.some((b) => b.worthIt)} title={boosterTitle}>
+          {#if boostersReady.length}✨ {boostersReady.length} Deko{boostersReady.length === 1 ? '' : 's'} bereit{:else}✨ Deko
+            in {fmtDuration(nextBooster.readyIn / 60)}{/if}
+        </span>
       {/if}
     {:else}
       <span class="level" title="Live-Stand nicht erreichbar, eingebauter Stand aus progress.json">Offline-Stand</span>
@@ -272,6 +305,10 @@
   }
   .level.live {
     color: var(--accent-strong);
+  }
+  .level.boost-ready {
+    color: var(--accent-strong);
+    border-color: var(--accent);
   }
   .level.live.partial {
     color: var(--warn);

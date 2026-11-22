@@ -63,6 +63,10 @@ länger als 40 Minuten her ist, und zeigt Wurzeltaler, Punkte und die nächste E
 Gesperrte Reihen, die der Bot kennt (Wassergarten, Recyclinghof usw.), schaltet der
 Live-Stand frei; der Rest bleibt in `progress.json` unter `locked`.
 
+Wachstums-Dekos (z. B. „Orgelspieler Olaf“, spart 6 h, 48 h Abklingzeit) stehen im Tab
+„Bestand“ mit ihrer Abklingzeit. „Bereit · lohnt“ heißt: Die Deko ist bereit und jede
+Pflanze in ihrem Garten wächst noch mindestens so lange, wie die Deko spart.
+
 Lokal: `VITE_STATUS_URL=https://... npm run dev`.
 
 ## Regalbestand (stock.json)
