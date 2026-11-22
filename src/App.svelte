@@ -158,14 +158,17 @@
       {/if}
       {#if harvestList.length}
         <span class="item" title={harvestTitle}>
-          🌾 {fmtUntil(harvestList[0][1], now) === 'fertig'
+          🌾 {harvestList[0][0]}
+          {fmtUntil(harvestList[0][1], now) === 'fertig'
             ? 'fertig'
             : fmtDurationShort((new Date(harvestList[0][1]).getTime() - now) / 60000)}
         </span>
       {/if}
       {#if nextBooster}
         <span class="item" class:boost-ready={boostersReady.some((b) => b.worthIt)} title={boosterTitle}>
-          ✨ {boostersReady.length ? `${boostersReady.length} bereit` : fmtDurationShort(nextBooster.readyIn / 60)}
+          ✨ {boostersReady.length
+            ? `G${[...new Set(boostersReady.map((b) => b.garden))].sort().join(', G')} bereit`
+            : `G${nextBooster.garden} ${fmtDurationShort(nextBooster.readyIn / 60)}`}
         </span>
       {/if}
     {:else}

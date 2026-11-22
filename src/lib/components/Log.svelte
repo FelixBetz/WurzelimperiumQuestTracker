@@ -41,6 +41,34 @@
   function key(e) {
     return `${e.source}:${e.time}`;
   }
+
+  // Was der Bot laut seinen Meldungen getan hat (actions aus log.json), als Chips.
+  function actionChips(a) {
+    if (!a) return [];
+    const chips = [];
+    const n = (v) => fmt(v);
+    if (a.planted) chips.push({ text: `🌱 ${n(a.planted)} gepflanzt` });
+    if (a.watered) chips.push({ text: `💧 ${n(a.watered)} gegossen` });
+    if (a.weeded) chips.push({ text: `🧹 ${n(a.weeded)} Unkraut` });
+    if (a.parkMoney || a.parkPoints || a.parkParkpoints) {
+      chips.push({
+        text: `🏞 Park +${n(a.parkMoney ?? 0)} wT`,
+        title: `Parkkasse: ${n(a.parkMoney ?? 0)} wT, ${n(a.parkPoints ?? 0)} Punkte, ${n(a.parkParkpoints ?? 0)} Parkpunkte`,
+      });
+    }
+    if (a.parkRenewed) chips.push({ text: `🏞 ${n(a.parkRenewed)} erneuert` });
+    if (a.bonsaiFinished) chips.push({ text: `🌳 ${n(a.bonsaiFinished)} Bonsai fertig` });
+    if (a.branchesCut) chips.push({ text: `✂ ${n(a.branchesCut)} Äste` });
+    if (a.scissorsBought) chips.push({ text: `✂ ${n(a.scissorsBought)} Scheren gekauft` });
+    if (a.problems?.length) {
+      chips.push({
+        text: `⚠ ${a.problems.length} ${a.problems.length === 1 ? 'Hinweis' : 'Hinweise'}`,
+        title: a.problems.join('\n'),
+        cls: 'warn',
+      });
+    }
+    return chips;
+  }
 </script>
 
 <div class="log">
@@ -53,8 +81,9 @@
     <label class="chk"><input type="checkbox" bind:checked={onlyQuests} /> nur Quests und Level</label>
   </div>
   <p class="hint">
-    🤖 <b>Bot</b>: was ein Lauf geändert hat (Ernte, Anbau, Käufe, Quests). ✋ <b>Außerhalb</b>: was sich zwischen
-    zwei Läufen geändert hat, also von Hand im Browser (oder durchs Spiel selbst). Die letzten 14 Tage.
+    🤖 <b>Bot</b>: was ein Lauf geändert hat (Ernte, Anbau, Käufe, Quests) und was er laut seinen Meldungen getan hat
+    (gepflanzt, gegossen, Park, Hinweise). ✋ <b>Außerhalb</b>: was sich zwischen zwei Läufen geändert hat, also von
+    Hand im Browser (oder durchs Spiel selbst). Die letzten 14 Tage.
   </p>
 
   {#if error}
@@ -95,6 +124,9 @@
               {#if e.changes.coins}
                 <span class="chip">🪙 {fmtDelta(e.changes.coins)} Coins</span>
               {/if}
+              {#each actionChips(e.actions) as c (c.text)}
+                <span class="chip act {c.cls ?? ''}" title={c.title ?? ''}>{c.text}</span>
+              {/each}
               {#each open ? stock : stock.slice(0, STOCK_PREVIEW) as [name, delta] (name)}
                 <span class="chip" class:plus={delta > 0} class:minus={delta < 0}>{fmtDelta(delta)} {name}</span>
               {/each}
@@ -218,6 +250,14 @@
     font-weight: 700;
     color: var(--accent-strong);
     border-color: var(--accent);
+  }
+  .chip.act {
+    background: none;
+    border-style: dashed;
+  }
+  .chip.warn {
+    color: var(--warn);
+    border-color: var(--warn);
   }
   .chip.plus {
     color: var(--accent-strong);
