@@ -1,26 +1,54 @@
 <script>
-  import { stock } from '../data.js';
+  import { stock, stockGroup } from '../data.js';
   import { fmt } from '../format.js';
 
   // Sortierung per Klick auf die Spaltenköpfe; zweiter Klick dreht die Richtung.
   let sortBy = $state('amount'); // 'name' | 'amount'
   let desc = $state(true);
   let hideZero = $state(true);
+  let grouped = $state(true);
   let query = $state('');
 
-  const all = Object.entries(stock.items).map(([name, amount]) => ({ name, amount: Number(amount) || 0 }));
+  // Reihenfolge und Überschriften der Gruppen; 'tank' ist der Honig, der noch
+  // im Bienengarten liegt und erst abgefüllt werden muss.
+  const GROUPS = [
+    ['garden', 'Garten'],
+    ['water', 'Wassergarten'],
+    ['herb', 'Kräutergarten'],
+    ['honey', 'Honig im Regal'],
+    ['tank', 'Honig im Bienengarten (nicht abgefüllt)'],
+    ['other', 'Sonstiges'],
+  ];
+
+  const toRow = (group) => ([name, amount]) => ({ name, amount: Number(amount) || 0, group: group ?? stockGroup(name) });
+  const all = Object.entries(stock.items).map(toRow());
+  const tank = Object.entries(stock.honeyTank).map(toRow('tank'));
   const collator = new Intl.Collator('de', { sensitivity: 'base' });
 
-  let rows = $derived.by(() => {
+  // Filtert und sortiert eine Liste; liest query, hideZero, sortBy und desc,
+  // deshalb rechnen die $derived darunter bei jeder Änderung neu.
+  function filterSort(list) {
     const q = query.trim().toLowerCase();
-    const list = all.filter((r) => (!hideZero || r.amount > 0) && (!q || r.name.toLowerCase().includes(q)));
     const dir = desc ? -1 : 1;
-    return list.sort((a, b) =>
-      sortBy === 'name'
-        ? dir * collator.compare(a.name, b.name)
-        : dir * (a.amount - b.amount) || collator.compare(a.name, b.name),
-    );
-  });
+    return list
+      .filter((r) => (!hideZero || r.amount > 0) && (!q || r.name.toLowerCase().includes(q)))
+      .sort((a, b) =>
+        sortBy === 'name'
+          ? dir * collator.compare(a.name, b.name)
+          : dir * (a.amount - b.amount) || collator.compare(a.name, b.name),
+      );
+  }
+
+  let rows = $derived(filterSort(all));
+  let sections = $derived(
+    grouped
+      ? GROUPS.map(([key, label]) => ({
+          key,
+          label,
+          rows: filterSort(key === 'tank' ? tank : all.filter((r) => r.group === key)),
+        })).filter((s) => s.rows.length)
+      : [{ key: 'all', label: null, rows }],
+  );
 
   function sort(column) {
     if (sortBy === column) {
@@ -46,6 +74,10 @@
       <input type="checkbox" bind:checked={hideZero} />
       Menge 0 ausblenden
     </label>
+    <label class="chk">
+      <input type="checkbox" bind:checked={grouped} />
+      nach Gruppen
+    </label>
   </div>
 
   <p class="stats">
@@ -53,7 +85,7 @@
     {#if stock.live}Live-Stand {stand}{:else if stand}eingebauter Stand {stand}{:else}eingebauter Stand (ohne Bestand){/if}
   </p>
 
-  {#if rows.length === 0}
+  {#if sections.length === 0}
     <p class="empty">Kein Bestand gefunden.</p>
   {:else}
     <table>
@@ -63,14 +95,21 @@
           <th class="num"><button class="sort" class:on={sortBy === 'amount'} onclick={() => sort('amount')}>Menge{arrow('amount')}</button></th>
         </tr>
       </thead>
-      <tbody>
-        {#each rows as r (r.name)}
-          <tr class:zero={r.amount === 0}>
-            <td class="item">{r.name}</td>
-            <td class="num big">{fmt(r.amount)}</td>
-          </tr>
-        {/each}
-      </tbody>
+      {#each sections as s (s.key)}
+        <tbody>
+          {#if s.label}
+            <tr class="group">
+              <th colspan="2">{s.label} <span class="count">{s.rows.length}</span></th>
+            </tr>
+          {/if}
+          {#each s.rows as r (r.name)}
+            <tr class:zero={r.amount === 0}>
+              <td class="item">{r.name}</td>
+              <td class="num big">{fmt(r.amount)}</td>
+            </tr>
+          {/each}
+        </tbody>
+      {/each}
     </table>
   {/if}
 </div>
@@ -155,6 +194,20 @@
   td.big {
     font-weight: 700;
     color: var(--accent-strong);
+  }
+  tr.group th {
+    position: static;
+    padding-top: 1.1rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    background: none;
+  }
+  tr.group .count {
+    margin-left: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--muted);
   }
   tr.zero td {
     color: var(--muted);

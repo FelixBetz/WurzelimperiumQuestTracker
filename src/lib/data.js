@@ -39,12 +39,21 @@ export const growing = live?.growing ?? null;
 const stockData =
   live?.stock && Object.keys(live.stock).length ? { updatedAt: live.updatedAt, items: live.stock } : builtStockData;
 
-// Regalbestand für den Tab „Bestand“: { items: { Name: Menge }, updatedAt, live }.
+// Regalbestand für den Tab „Bestand“: { items: { Name: Menge }, groups, honeyTank, updatedAt, live }.
+// groups: { Name: 'garden' | 'water' | 'herb' | 'honey' } aus dem Live-Stand; ohne ihn
+// wird nur Honig am Namen erkannt, der Rest landet unter 'other'.
+const isLiveStock = stockData !== builtStockData;
 export const stock = {
   items: stockData.items ?? {},
+  groups: (isLiveStock && live?.stockGroups) || null,
+  honeyTank: (isLiveStock && live?.honeyTank) || {},
   updatedAt: stockData.updatedAt ?? null,
-  live: stockData !== builtStockData,
+  live: isLiveStock,
 };
+
+export function stockGroup(name) {
+  return stock.groups?.[name] ?? (/-honig$/i.test(name) ? 'honey' : 'other');
+}
 
 // Reihen, die im Spiel noch nicht freigeschaltet sind (unabhängig vom Level).
 // Kommt aus progress.json ("locked": [seriesId, ...]).
