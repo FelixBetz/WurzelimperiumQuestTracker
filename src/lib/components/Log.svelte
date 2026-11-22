@@ -61,6 +61,65 @@
 
   const FROM_MESSAGES = 'Aus den Meldungen des Bots in diesem Lauf';
 
+  // Schritte eines Laufs (steps aus log.json), in der Reihenfolge von daily.py
+  const STEPS = {
+    weeds: ['🧹', 'Unkraut'],
+    harvest: ['🌾', 'Ernte'],
+    plant: ['🌱', 'Anbau'],
+    water: ['💧', 'Gießen'],
+    museum: ['🏛', 'Museum'],
+    bees: ['🐝', 'Bienen'],
+    park: ['🏞', 'Park'],
+    decogardens: ['🎭', 'Deko-Gärten'],
+    bonuses: ['🎁', 'Boni'],
+    bonsai: ['🌳', 'Bonsai'],
+    infinity: ['♾', 'Infinity-Quest'],
+    minigames: ['🎲', 'Minispiele'],
+  };
+
+  function stepInfo(s) {
+    const [icon, label] = STEPS[s.key] ?? ['•', s.key];
+    return { icon, label };
+  }
+
+  function fmtMs(ms) {
+    return ms >= 1000 ? `${(ms / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} s` : `${ms} ms`;
+  }
+
+  // Erklärung, die sich aus Schritt und Einstellungen ergibt
+  function stepNote(e, s) {
+    const text = (s.messages ?? []).map((m) => m.text).join('\n');
+    if (s.key === 'infinity' && /Zu wenig WT/.test(text) && e.settings?.infinityLimit) {
+      return `Übersprungen: Kontostand unter der Grenze von ${fmt(e.settings.infinityLimit)} wT (infinityQuestLimit in der Notiz)`;
+    }
+    if (s.key === 'park' && e.actions?.parkRenewed && s.changes?.money != null) {
+      const cost = s.changes.money - (e.actions.parkMoney ?? 0);
+      if (cost < 0) return `Erneuern von ${fmt(e.actions.parkRenewed)} Park-Dekos: ${fmtDelta(cost)} wT (Kasse ${fmtDelta(e.actions.parkMoney ?? 0)} wT)`;
+    }
+    return '';
+  }
+
+  // Was der Lauf aus der Notiz gelesen hat
+  function settingsText(st) {
+    const bees = { 1: '2 h', 2: '8 h', 3: '24 h' }[st.bees] ?? 'aus';
+    return [
+      st.stopped ? 'isStop an' : null,
+      `Pflanzen: ${(st.plants ?? []).join(', ') || '-'}`,
+      `Park ${st.park ? 'an' : 'aus'}`,
+      `Bienen ${bees}`,
+      `Minispiele ${st.minigames ? 'an' : 'aus'}`,
+      st.infinityLimit != null ? `Infinity ab ${fmt(st.infinityLimit)} wT` : null,
+      st.bonsaiCutLevel != null ? `Bonsai-Stufe ${st.bonsaiCutLevel} (${(st.bonsaiPrices ?? []).join(', ')})` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  }
+
+  function toggle(e, open) {
+    if (window.getSelection()?.toString()) return; // markierter Text soll die Karte nicht zuklappen
+    expanded = { ...expanded, [key(e)]: !open };
+  }
+
   // Was der Bot laut seinen Meldungen getan hat (actions aus log.json), als Chips mit Herkunft im Tooltip.
   function actionChips(a) {
     if (!a) return [];
@@ -135,17 +194,28 @@
           {@const stock = stockList(e)}
           <!-- ohne eigene Wahl ist der neueste Eintrag der Ansicht aufgeklappt -->
           {@const open = expanded[key(e)] ?? (i === 0 && j === 0)}
-          {@const details = (e.messages?.length ?? 0) > 0 || stock.length > STOCK_PREVIEW}
-          <li class={e.source}>
+          {@const details =
+            (e.messages?.length ?? 0) > 0 || (e.steps?.length ?? 0) > 0 || !!e.settings || stock.length > STOCK_PREVIEW}
+          <!-- ein Klick irgendwo auf die Karte klappt sie auf oder zu; role="button" wird nur gesetzt, wenn es etwas zum
+               Aufklappen gibt, das erkennt die Prüfung nicht -->
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+          <li
+            class={e.source}
+            class:clickable={details}
+            class:failed={e.failed}
+            onclick={() => details && toggle(e, open)}
+            onkeydown={(ev) => details && (ev.key === 'Enter' || ev.key === ' ') && (ev.preventDefault(), toggle(e, open))}
+            tabindex={details ? 0 : undefined}
+            role={details ? 'button' : undefined}
+            aria-expanded={details ? !!open : undefined}
+          >
             <div class="when">
               <span class="time">{fmtClock(e.time)}</span>
               <span class="src" title={e.since ? `seit ${fmtClock(e.since)}` : ''}>
-                {e.source === 'bot' ? '🤖 Bot' : '✋ Außerhalb'}
+                {e.source === 'bot' ? '🤖 Bot' : '✋ Außerhalb'}{#if e.seconds}<span class="dur"> · {e.seconds} s</span>{/if}
               </span>
               {#if details}
-                <button class="toggle" onclick={() => (expanded = { ...expanded, [key(e)]: !open })} aria-expanded={!!open}>
-                  {open ? '▾ weniger' : '▸ Details'}
-                </button>
+                <span class="toggle">{open ? '▾ weniger' : '▸ Details'}</span>
               {/if}
             </div>
             <div class="what">
@@ -187,14 +257,59 @@
                 >
               {/each}
               {#if stock.length > STOCK_PREVIEW && !open}
-                <button class="more" onclick={() => (expanded = { ...expanded, [key(e)]: true })}>
-                  +{fmt(stock.length - STOCK_PREVIEW)} weitere
-                </button>
+                <span class="more">+{fmt(stock.length - STOCK_PREVIEW)} weitere</span>
               {/if}
             </div>
-            {#if open && e.messages?.length}
-              <!-- der genaue Text, den der Bot in diesem Lauf gemeldet hat -->
-              <ol class="messages">
+            {#if open && e.steps?.length}
+              <!-- je Schritt: was sich geändert hat und was der Bot dabei gemeldet hat -->
+              {@const shown = e.steps.filter((s) => s.changes || s.messages || s.error)}
+              {@const quiet = e.steps.filter((s) => !(s.changes || s.messages || s.error))}
+              <!-- Klicks im Detailbereich klappen die Karte nicht zu (lesen, markieren, Tooltips) -->
+              <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+              <div class="steps" onclick={(ev) => ev.stopPropagation()}>
+                {#each shown as s (s.key)}
+                  <div class="step" class:failed={!!s.error}>
+                    <div class="step-head">
+                      <span class="step-name">{stepInfo(s).icon} {stepInfo(s).label}</span>
+                      <span class="ms">{fmtMs(s.ms)}</span>
+                      {#if s.changes?.money}
+                        <span class="chip" class:plus={s.changes.money > 0} class:minus={s.changes.money < 0}>
+                          💰 {fmtDelta(s.changes.money)} wT
+                        </span>
+                      {/if}
+                      {#if s.changes?.points}<span class="chip plus">⭐ {fmtDelta(s.changes.points)}</span>{/if}
+                      {#if s.changes?.coins}<span class="chip">🪙 {fmtDelta(s.changes.coins)}</span>{/if}
+                      {#each Object.entries(s.changes?.stock ?? {}) as [name, delta] (name)}
+                        <span class="chip" class:plus={delta > 0} class:minus={delta < 0}>{fmtDelta(delta)} {name}</span>
+                      {/each}
+                      {#if s.error}<span class="chip warn" title={s.error}>⚠ fehlgeschlagen</span>{/if}
+                    </div>
+                    {#if stepNote(e, s)}<p class="step-note">{stepNote(e, s)}</p>{/if}
+                    {#if s.messages?.length}
+                      <ol class="messages">
+                        {#each s.messages as m, k (k)}
+                          <li class={m.level}>
+                            <span class="tag" title={m.tag ? 'Diese Zeile zählt für den Chip mit diesem Symbol' : ''}
+                              >{TAG_ICON[m.tag] ?? ''}</span
+                            ><span>{m.text}{#if m.count > 1}<span class="times"> ×{m.count}</span>{/if}</span>
+                          </li>
+                        {/each}
+                      </ol>
+                    {/if}
+                  </div>
+                {/each}
+                {#if quiet.length}
+                  <p class="legend" title={quiet.map((s) => `${stepInfo(s).label}: ${fmtMs(s.ms)}`).join('\n')}>
+                    Ohne Änderung: {quiet.map((s) => stepInfo(s).label).join(', ')}
+                  </p>
+                {/if}
+                {#if e.settings}<p class="legend">⚙ {settingsText(e.settings)}</p>{/if}
+                <p class="legend">Zeilen mit Symbol ergeben die Chips mit demselben Symbol oben.</p>
+              </div>
+            {:else if open && e.messages?.length}
+              <!-- der genaue Text, den der Bot in diesem Lauf gemeldet hat; Klicks darin klappen nicht zu -->
+              <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+              <ol class="messages" onclick={(ev) => ev.stopPropagation()}>
                 {#each e.messages as m, j (j)}
                   <li class={m.level}>
                     <span class="tag" title={m.tag ? 'Diese Zeile zählt für den Chip mit diesem Symbol' : ''}
@@ -304,14 +419,56 @@
     border-left-color: var(--accent);
   }
   .toggle {
-    align-self: flex-start;
     margin-top: 0.2rem;
-    padding: 0;
-    border: none;
-    background: none;
     color: var(--muted);
     font-size: 0.75rem;
+  }
+  ul > li.clickable {
     cursor: pointer;
+  }
+  ul > li.clickable:hover {
+    border-color: var(--accent);
+  }
+  ul > li.failed {
+    border-left-color: var(--danger);
+  }
+  .dur {
+    color: var(--muted);
+  }
+  .steps {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    cursor: auto;
+  }
+  .step {
+    border-left: 2px solid var(--border);
+    padding-left: 0.6rem;
+  }
+  .step.failed {
+    border-left-color: var(--danger);
+  }
+  .step-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    margin-bottom: 0.3rem;
+  }
+  .step-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .ms {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-right: 0.3rem;
+  }
+  .step-note {
+    margin: 0 0 0.3rem;
+    font-size: 0.8rem;
+    color: var(--warn);
   }
   .messages {
     grid-column: 1 / -1;
