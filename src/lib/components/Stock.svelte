@@ -1,67 +1,100 @@
 <script>
-  import { stock, stockGroup } from '../data.js';
+  import { stock, stockGroup, stockDemand, series, progress, currentQuest, openQuests, isLocked } from '../data.js';
+  import { settings } from '../store.js';
   import { fmt } from '../format.js';
 
-  // Sortierung per Klick auf die Spaltenköpfe; zweiter Klick dreht die Richtung.
-  let sortBy = $state('amount'); // 'name' | 'amount'
-  let desc = $state(true);
-  let hideZero = $state(true);
-  let grouped = $state(true);
-  let query = $state('');
-
-  // Reihenfolge und Überschriften der Gruppen; 'tank' ist der Honig, der noch
-  // im Bienengarten liegt und erst abgefüllt werden muss.
+  // Karten je Gruppe; 'tank' ist der Honig, der noch im Bienengarten liegt und
+  // erst abgefüllt werden muss (für Quests zählt nur das Regal).
   const GROUPS = [
-    ['garden', 'Garten'],
-    ['water', 'Wassergarten'],
-    ['herb', 'Kräutergarten'],
-    ['honey', 'Honig im Regal'],
-    ['tank', 'Honig im Bienengarten (nicht abgefüllt)'],
-    ['other', 'Sonstiges'],
+    { key: 'garden', label: 'Garten', icon: '🌱' },
+    { key: 'water', label: 'Wassergarten', icon: '💧' },
+    { key: 'herb', label: 'Kräutergarten', icon: '🌿' },
+    { key: 'honey', label: 'Honig im Regal', icon: '🍯' },
+    { key: 'tank', label: 'Bienengarten, nicht abgefüllt', icon: '🐝' },
+    { key: 'other', label: 'Sonstiges', icon: '📦' },
   ];
 
+  let sortBy = $state('amount'); // 'name' | 'amount' | 'missing'
+  let scope = $state('current'); // Bedarf aus 'current' = aktueller Quest je Reihe, 'open' = allen offenen
+  let hideEmpty = $state(true);
+  let onlyNeeded = $state(false);
+  let query = $state('');
+  let collapsed = $state({});
+
   const toRow = (group) => ([name, amount]) => ({ name, amount: Number(amount) || 0, group: group ?? stockGroup(name) });
-  const all = Object.entries(stock.items).map(toRow());
+  const shelf = Object.entries(stock.items).map(toRow());
   const tank = Object.entries(stock.honeyTank).map(toRow('tank'));
   const collator = new Intl.Collator('de', { sensitivity: 'base' });
 
-  // Filtert und sortiert eine Liste; liest query, hideZero, sortBy und desc,
-  // deshalb rechnen die $derived darunter bei jeder Änderung neu.
-  function filterSort(list) {
-    const q = query.trim().toLowerCase();
-    const dir = desc ? -1 : 1;
-    return list
-      .filter((r) => (!hideZero || r.amount > 0) && (!q || r.name.toLowerCase().includes(q)))
-      .sort((a, b) =>
-        sortBy === 'name'
-          ? dir * collator.compare(a.name, b.name)
-          : dir * (a.amount - b.amount) || collator.compare(a.name, b.name),
-      );
+  // Quests wie bei den Empfehlungen: nur Reihen, die freigeschaltet und mit dem Level erreichbar sind.
+  let demand = $derived.by(() => {
+    const lvl = $settings.level;
+    const quests = [];
+    for (const s of series) {
+      if (isLocked(s) || (lvl != null && s.minLevel != null && s.minLevel > lvl)) continue;
+      if (scope === 'current') {
+        const q = currentQuest(s, progress);
+        if (q) quests.push(q);
+      } else {
+        quests.push(...openQuests(s, progress));
+      }
+    }
+    return stockDemand(quests);
+  });
+
+  // status: 'ok' reicht, 'partial' reicht teilweise, 'none' nichts da, null kein Bedarf
+  function withDemand(r) {
+    const d = r.group === 'tank' ? null : demand.get(r.name);
+    const needed = d?.needed ?? 0;
+    const missing = Math.max(0, needed - r.amount);
+    const status = needed === 0 ? null : missing === 0 ? 'ok' : r.amount > 0 ? 'partial' : 'none';
+    return { ...r, needed, quests: d?.quests ?? 0, missing, status };
   }
 
-  let rows = $derived(filterSort(all));
-  let sections = $derived(
-    grouped
-      ? GROUPS.map(([key, label]) => ({
-          key,
-          label,
-          rows: filterSort(key === 'tank' ? tank : all.filter((r) => r.group === key)),
-        })).filter((s) => s.rows.length)
-      : [{ key: 'all', label: null, rows }],
+  function compare(a, b) {
+    if (sortBy === 'name') return collator.compare(a.name, b.name);
+    if (sortBy === 'missing') return b.missing - a.missing || b.needed - a.needed || collator.compare(a.name, b.name);
+    return b.amount - a.amount || collator.compare(a.name, b.name);
+  }
+
+  let rows = $derived.by(() => {
+    const q = query.trim().toLowerCase();
+    return [...shelf, ...tank]
+      .map(withDemand)
+      .filter((r) => !q || r.name.toLowerCase().includes(q))
+      .filter((r) => !onlyNeeded || r.needed > 0)
+      .filter((r) => !hideEmpty || r.amount > 0 || r.needed > 0)
+      .sort(compare);
+  });
+
+  let cards = $derived(
+    GROUPS.map((g) => {
+      const list = rows.filter((r) => r.group === g.key);
+      const max = Math.max(1, ...list.map((r) => r.amount));
+      return { ...g, rows: list, max };
+    }).filter((c) => c.rows.length),
   );
 
-  function sort(column) {
-    if (sortBy === column) {
-      desc = !desc;
-    } else {
-      sortBy = column;
-      desc = column === 'amount'; // Menge zuerst absteigend, Name zuerst A bis Z
-    }
+  // Zusammenfassung über das ganze Regal (ohne Suche), damit sie sich beim Filtern nicht ändert.
+  let summary = $derived.by(() => {
+    const out = { ok: 0, partial: 0, none: 0 };
+    for (const r of shelf.map(withDemand)) if (r.status) out[r.status] += 1;
+    return out;
+  });
+
+  // Logarithmisch, damit 17 Äpfel neben 428.100 Salat noch sichtbar sind.
+  function barWidth(amount, max) {
+    return amount > 0 ? Math.max(3, (Math.log10(amount + 1) / Math.log10(max + 1)) * 100) : 0;
   }
 
-  function arrow(column) {
-    if (sortBy !== column) return '';
-    return desc ? ' ▼' : ' ▲';
+  function statusTitle(r) {
+    const q = r.quests === 1 ? '1 Quest' : `${r.quests} Quests`;
+    if (r.status === 'ok') return `Reicht für ${q} (${fmt(r.needed)} gebraucht)`;
+    return `Für ${q} fehlen ${fmt(r.missing)} von ${fmt(r.needed)}`;
+  }
+
+  function toggle(key) {
+    collapsed = { ...collapsed, [key]: !collapsed[key] };
   }
 
   const stand = stock.updatedAt ? new Date(stock.updatedAt).toLocaleString('de-DE') : null;
@@ -70,63 +103,77 @@
 <div class="stock">
   <div class="controls">
     <input class="search" type="search" placeholder="Suchen …" bind:value={query} />
-    <label class="chk">
-      <input type="checkbox" bind:checked={hideZero} />
-      Menge 0 ausblenden
-    </label>
-    <label class="chk">
-      <input type="checkbox" bind:checked={grouped} />
-      nach Gruppen
-    </label>
+    <div class="seg" title="Sortierung in jeder Karte">
+      <button class:on={sortBy === 'amount'} onclick={() => (sortBy = 'amount')}>Menge</button>
+      <button class:on={sortBy === 'name'} onclick={() => (sortBy = 'name')}>Name</button>
+      <button class:on={sortBy === 'missing'} onclick={() => (sortBy = 'missing')}>Fehlt</button>
+    </div>
+    <div class="seg" title="Welche Quests als Bedarf zählen">
+      <button class:on={scope === 'current'} onclick={() => (scope = 'current')}>Aktuelle Quests</button>
+      <button class:on={scope === 'open'} onclick={() => (scope = 'open')}>Alle offenen</button>
+    </div>
+  </div>
+  <div class="controls">
+    <label class="chk"><input type="checkbox" bind:checked={onlyNeeded} /> nur mit Quest-Bedarf</label>
+    <label class="chk"><input type="checkbox" bind:checked={hideEmpty} /> leere ohne Bedarf ausblenden</label>
   </div>
 
   <p class="stats">
-    {rows.length} von {all.length} Gegenständen ·
-    {#if stock.live}Live-Stand {stand}{:else if stand}eingebauter Stand {stand}{:else}eingebauter Stand (ohne Bestand){/if}
+    <span class="pill ok">✓ {summary.ok} reichen</span>
+    <span class="pill partial">◐ {summary.partial} teilweise</span>
+    <span class="pill none">✗ {summary.none} fehlen</span>
+    <span class="stand">
+      {#if stock.live}Live-Stand {stand}{:else if stand}eingebauter Stand {stand}{:else}eingebauter Stand (ohne Bestand){/if}
+    </span>
   </p>
 
-  {#if sections.length === 0}
-    <p class="empty">Kein Bestand gefunden.</p>
+  {#if cards.length === 0}
+    <p class="empty">Nichts gefunden.</p>
   {:else}
-    <table>
-      <thead>
-        <tr>
-          <th><button class="sort" class:on={sortBy === 'name'} onclick={() => sort('name')}>Gegenstand{arrow('name')}</button></th>
-          <th class="num"><button class="sort" class:on={sortBy === 'amount'} onclick={() => sort('amount')}>Menge{arrow('amount')}</button></th>
-        </tr>
-      </thead>
-      {#each sections as s (s.key)}
-        <tbody>
-          {#if s.label}
-            <tr class="group">
-              <th colspan="2">{s.label} <span class="count">{s.rows.length}</span></th>
-            </tr>
+    <div class="grid">
+      {#each cards as c (c.key)}
+        <section class="card">
+          <button class="head" onclick={() => toggle(c.key)} aria-expanded={!collapsed[c.key]}>
+            <span class="icon">{c.icon}</span>
+            <span class="label">{c.label}</span>
+            <span class="count">{c.rows.length}</span>
+            <span class="chev">{collapsed[c.key] ? '▸' : '▾'}</span>
+          </button>
+          {#if !collapsed[c.key]}
+            <ul>
+              {#each c.rows as r (r.name)}
+                <li class:empty-row={r.amount === 0}>
+                  <span class="name">{r.name}</span>
+                  <span class="bar"><span class="fill" style:width="{barWidth(r.amount, c.max)}%"></span></span>
+                  <span class="amount">{fmt(r.amount)}</span>
+                  {#if r.status}
+                    <span class="need {r.status}" title={statusTitle(r)}>
+                      {#if r.status === 'ok'}✓ {fmt(r.needed)}{:else}−{fmt(r.missing)}{/if}
+                    </span>
+                  {:else}
+                    <span class="need"></span>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
           {/if}
-          {#each s.rows as r (r.name)}
-            <tr class:zero={r.amount === 0}>
-              <td class="item">{r.name}</td>
-              <td class="num big">{fmt(r.amount)}</td>
-            </tr>
-          {/each}
-        </tbody>
+        </section>
       {/each}
-    </table>
+    </div>
   {/if}
 </div>
 
 <style>
-  .stock {
-    max-width: 640px;
-  }
   .controls {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 1rem;
+    gap: 0.6rem 1rem;
     margin-bottom: 0.6rem;
   }
   .search {
     flex: 1 1 200px;
+    max-width: 320px;
     padding: 0.4rem 0.6rem;
     border: 1px solid var(--border);
     border-radius: 9px;
@@ -134,83 +181,171 @@
     color: var(--text);
     font: inherit;
   }
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    overflow: hidden;
+  }
+  .seg button {
+    border: none;
+    border-radius: 0;
+    background: var(--panel);
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  .seg button.on {
+    background: var(--accent);
+    color: #fff;
+  }
   .chk {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.88rem;
   }
   .chk input {
     accent-color: var(--accent);
   }
   .stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.4rem 0 1rem;
+    font-size: 0.85rem;
+  }
+  .pill {
+    border-radius: 999px;
+    padding: 0.1rem 0.6rem;
+    font-weight: 600;
+    border: 1px solid currentColor;
+  }
+  .stand {
     color: var(--muted);
-    font-size: 0.9rem;
-    margin: 0.2rem 0 1rem;
+    margin-left: 0.4rem;
   }
   .empty {
     color: var(--muted);
     padding: 2rem;
     text-align: center;
   }
-  table {
+
+  /* Spalten statt Grid: kurze Karten rutschen unter andere kurze, statt neben der langen Garten-Karte Platz zu lassen. */
+  .grid {
+    columns: 320px;
+    column-gap: 1rem;
+  }
+  .card {
+    break-inside: avoid;
+    margin-bottom: 1rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     width: 100%;
-    border-collapse: collapse;
-    font-size: 0.92rem;
-  }
-  th,
-  td {
+    padding: 0.7rem 0.9rem;
+    border: none;
+    border-radius: 0;
+    background: var(--panel-2);
+    color: var(--text);
     text-align: left;
-    padding: 0.5rem 0.6rem;
-    border-bottom: 1px solid var(--border);
+    cursor: pointer;
   }
-  th {
-    position: sticky;
-    top: 0;
-    background: var(--bg);
+  .icon {
+    font-size: 1.15rem;
   }
-  th.num,
-  td.num {
+  .label {
+    font-weight: 700;
+  }
+  .count {
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0 0.45rem;
+  }
+  .chev {
+    margin-left: auto;
+    color: var(--muted);
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0.3rem 0;
+  }
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 70px 78px 84px;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.32rem 0.9rem;
+    font-size: 0.9rem;
+  }
+  li + li {
+    border-top: 1px solid var(--border);
+  }
+  .name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bar {
+    height: 6px;
+    background: var(--panel-2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .fill {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  }
+  .amount {
     text-align: right;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent-strong);
+  }
+  li.empty-row .name,
+  li.empty-row .amount {
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .need {
+    text-align: right;
+    font-size: 0.78rem;
+    font-weight: 650;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
-  .sort {
-    border: none;
-    background: none;
-    padding: 0;
-    color: var(--muted);
-    font-size: 0.8rem;
-    font-weight: 650;
-    cursor: pointer;
-  }
-  .sort.on {
-    color: var(--text);
-  }
-  td.item {
-    font-weight: 600;
-  }
-  td.big {
-    font-weight: 700;
+  .need.ok,
+  .pill.ok {
     color: var(--accent-strong);
   }
-  tr.group th {
-    position: static;
-    padding-top: 1.1rem;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text);
-    background: none;
+  .need.partial,
+  .pill.partial {
+    color: var(--warn);
   }
-  tr.group .count {
-    margin-left: 0.3rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--muted);
+  .need.none,
+  .pill.none {
+    color: var(--danger);
   }
-  tr.zero td {
-    color: var(--muted);
-    font-weight: 400;
+
+  @media (max-width: 520px) {
+    li {
+      grid-template-columns: minmax(0, 1fr) 50px 70px 74px;
+      padding: 0.32rem 0.6rem;
+    }
   }
 </style>

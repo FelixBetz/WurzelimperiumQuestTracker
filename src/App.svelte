@@ -288,6 +288,16 @@
   }
 
   @media (max-width: 860px) {
+    /* Fünf Tabs passen nicht auf ein Handy: Leiste seitlich wischen statt abschneiden. */
+    .tabs {
+      max-width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs button {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
     .layout {
       grid-template-columns: 1fr;
       gap: 0.7rem;

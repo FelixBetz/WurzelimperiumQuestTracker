@@ -273,6 +273,28 @@ function neededAmount(r) {
   return Number(r.amount ?? 0) * requirementAmountMultiplier(r.item);
 }
 
+// Bedarf der übergebenen Quests je Regal-Gegenstand, für den Tab „Bestand“:
+// Map { Name wie im Regal: { needed, quests } }. Gegenstände, die nicht im Regal
+// geführt werden (z. B. Riegel, Wurzeltaler), fehlen.
+const stockNameByKey = new Map(Object.keys(stockData.items ?? {}).map((name) => [stockKey(name), name]));
+
+export function stockDemand(quests) {
+  const out = new Map();
+  for (const q of quests) {
+    for (const r of q.requirements) {
+      if (isCurrencyItem(r.item)) continue;
+      const key = resolveStockKey(r.item);
+      if (key === null) continue;
+      const name = stockNameByKey.get(key);
+      const e = out.get(name) ?? { needed: 0, quests: 0 };
+      e.needed += neededAmount(r);
+      e.quests += 1;
+      out.set(name, e);
+    }
+  }
+  return out;
+}
+
 // Pro Reihe wird der Bestand der Reihe nach verbraucht: Jede offene Quest sieht
 // nur, was die offenen Quests davor von demselben Gegenstand übrig lassen.
 // Die Reihen selbst rechnen unabhängig voneinander mit dem vollen Bestand.
