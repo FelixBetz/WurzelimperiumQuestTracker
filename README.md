@@ -46,6 +46,30 @@ Ablauf: Zahl anpassen → committen → pushen. Auf der gehosteten Seite erschei
 der neue Stand nach dem automatischen Deploy. Lokal (`npm run dev`) genügt
 Speichern der Datei (Hot-Reload).
 
+## Regalbestand (stock.json)
+
+`src/data/stock.json` enthält Pflanzen und Honig aus dem Regal. Die Datei wird von
+`get_quests.py` (liegt neben dem Bot-Ordner) bei jedem Lauf komplett neu geschrieben:
+
+```json
+{
+  "version": 1,
+  "updatedAt": "2026-11-01T20:15:00",
+  "items": {
+    "Karotte": 12000,
+    "Mirabellenblüten-Honig": 88
+  }
+}
+```
+
+Die Quest-Anzeige zeigt daraus je Gegenstand einen Fortschrittsbalken mit dem Bestand
+(📦 Menge), grün sobald er für die Quest reicht. Innerhalb einer Reihe wird der Bestand
+der Reihe nach verbraucht: Jede offene Quest zeigt nur, was die offenen Quests davor
+übrig lassen. Jede Reihe startet dabei wieder mit dem vollen Bestand. Auf der gehosteten Seite erscheint ein neuer Stand erst nach
+Commit und Push. Gegenstände ohne Eintrag (z. B. Riegel oder Dünger) zeigen keinen
+Bestand. Quest-Namen werden wie bei den Shop-Preisen zugeordnet, Sonderfälle stehen
+unter `aliases` in `shopPrices.json`.
+
 ## Shop-Kosten pro Quest
 
 Die Quest-Anzeige kann zusätzlich den **Shop-Preis der benötigten Pflanzen**

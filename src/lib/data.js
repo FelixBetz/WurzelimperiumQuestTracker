@@ -2,6 +2,7 @@
 import raw from '../data/quests.json';
 import progressData from '../data/progress.json';
 import shopPriceData from '../data/shopPrices.json';
+import stockData from '../data/stock.json';
 
 // Fortschritt = pro Reihe die Anzahl erledigter Quests. Read-only: wird
 // ausschließlich durch Bearbeiten von src/data/progress.json geändert.
@@ -199,6 +200,75 @@ function resolveShopPrice(itemName) {
   return null;
 }
 
+// Regalbestand aus src/data/stock.json (geschrieben von get_quests.py).
+// Honig heißt im Spiel "Mirabellenblüten-Honig", in den Quests teils
+// "Mirabellen-Honig" – beide landen deshalb auf demselben Schlüssel.
+function stockKey(name) {
+  const key = deUmlaut(normalizeItemName(name));
+  const honey = key.match(/^(.+)-honig$/);
+  if (!honey) return key;
+  return `${honey[1].replace('bluten', '').replace(/(en|n|e)$/, '')}-honig`;
+}
+
+const stockLookup = new Map(
+  Object.entries(stockData.items ?? {}).map(([item, amount]) => [stockKey(item), amount]),
+);
+
+function resolveStockKey(itemName) {
+  const alias = shopPriceData.aliases?.[itemName];
+  for (const candidate of itemNameCandidates(typeof alias === 'string' ? alias : itemName)) {
+    const key = stockKey(candidate);
+    if (stockLookup.has(key)) return key;
+  }
+  return null;
+}
+
+function neededAmount(r) {
+  return Number(r.amount ?? 0) * requirementAmountMultiplier(r.item);
+}
+
+// Pro Reihe wird der Bestand der Reihe nach verbraucht: Jede offene Quest sieht
+// nur, was die offenen Quests davor von demselben Gegenstand übrig lassen.
+// Die Reihen selbst rechnen unabhängig voneinander mit dem vollen Bestand.
+const availableStock = (() => {
+  const out = new Map();
+  for (const s of series) {
+    const used = new Map();
+    for (const q of openQuests(s, progress)) {
+      q.requirements.forEach((r, i) => {
+        const key = resolveStockKey(r.item);
+        if (key === null) return;
+        const spent = used.get(key) ?? 0;
+        const total = stockLookup.get(key);
+        out.set(`${q.id}:${i}`, { stock: Math.max(0, total - spent), stockTotal: total });
+        used.set(key, spent + neededAmount(r));
+      });
+    }
+  }
+  return out;
+})();
+
+// stock = für diese Quest verfügbare Menge, null wenn sie erledigt ist oder der
+// Gegenstand nicht im Bestand geführt wird.
+function requirementStock(quest, i, r) {
+  const hit = availableStock.get(`${quest.id}:${i}`);
+  return {
+    stock: hit?.stock ?? null,
+    stockTotal: hit?.stockTotal ?? null,
+    needed: neededAmount(r),
+  };
+}
+
+export function stockTitle(r) {
+  const updated = stockData.updatedAt
+    ? ` · Stand ${new Date(stockData.updatedAt).toLocaleString('de-DE')}`
+    : '';
+  const nf = (n) => n.toLocaleString('de-DE');
+  const shared =
+    r.stock !== r.stockTotal ? ` · Regal gesamt ${nf(r.stockTotal)}, Rest nach früheren Quests der Reihe` : '';
+  return `Verfügbar: ${nf(r.stock)} von ${nf(r.needed)}${shared}${updated}`;
+}
+
 // Berechnet den Shop-Wert einer Quest anhand der benötigten Pflanzen.
 // Gibt bei fehlenden Preisen einen Teilwert + Liste fehlender Shop-Items zurück.
 export function questShopCost(quest) {
@@ -210,7 +280,7 @@ export function questShopCost(quest) {
   const nonShopItems = new Set();
   const requirements = [];
 
-  for (const r of quest.requirements) {
+  for (const [i, r] of quest.requirements.entries()) {
     if (isCurrencyItem(r.item)) {
       currencyTotal += Number(r.amount ?? 0);
       requirements.push({
@@ -222,6 +292,7 @@ export function questShopCost(quest) {
         unitPrice: null,
         total: null,
         mappedTo: null,
+        stock: null,
       });
       continue;
     }
@@ -231,6 +302,7 @@ export function questShopCost(quest) {
       requirements.push({
         item: r.item,
         amount: r.amount,
+        ...requirementStock(quest, i, r),
         isCurrency: false,
         isCraftOnly: true,
         hasPrice: false,
@@ -254,6 +326,7 @@ export function questShopCost(quest) {
       requirements.push({
         item: r.item,
         amount: r.amount,
+        ...requirementStock(quest, i, r),
         pricingAmount,
         isCurrency: false,
         isCraftOnly: false,
@@ -267,6 +340,7 @@ export function questShopCost(quest) {
       requirements.push({
         item: r.item,
         amount: r.amount,
+        ...requirementStock(quest, i, r),
         pricingAmount: Number(r.amount ?? 0) * requirementAmountMultiplier(r.item),
         isCurrency: false,
         isCraftOnly: false,
