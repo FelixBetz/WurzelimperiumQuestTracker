@@ -1,5 +1,5 @@
 <script>
-  import { loadSibling } from '../data.js';
+  import { loadSibling, series as allSeries, progress } from '../data.js';
   import { fmt, fmtCompact } from '../format.js';
   import LineChart from './LineChart.svelte';
 
@@ -11,14 +11,24 @@
     .then((h) => (days = h?.days ?? []))
     .catch((err) => (error = String(err)));
 
+  // Erledigte Quests wie in der Kopfzeile: Reihen, die der Bot liest, aus dem jeweiligen Tag,
+  // die übrigen (z. B. Erholungsgarten) aus progress.json.
+  function questsDone(day) {
+    return allSeries.reduce(
+      (sum, s) => sum + Math.min(s.quests.length, Math.max(0, day.series?.[s.id] ?? progress[s.id] ?? 0)),
+      0,
+    );
+  }
+
   // Drei Kennzahlen mit eigener Achse statt einer Grafik mit zwei Skalen.
   const METRICS = [
-    { key: 'questsDone', title: 'Quests erledigt', format: (v) => fmt(Math.round(v)) },
-    { key: 'money', title: 'Wurzeltaler', format: (v) => fmtCompact(v) },
-    { key: 'points', title: 'Punkte', format: (v) => fmtCompact(v) },
+    { title: 'Quests erledigt', value: questsDone, format: (v) => fmt(Math.round(v)) },
+    { title: 'Wurzeltaler', value: (d) => d.money, format: (v) => fmtCompact(v) },
+    { title: 'Punkte', value: (d) => d.points, format: (v) => fmtCompact(v) },
   ];
 
-  const series = (key) => (days ?? []).filter((d) => d[key] != null).map((d) => ({ date: d.date, value: d[key] }));
+  const points = (metric) =>
+    (days ?? []).filter((d) => metric.value(d) != null).map((d) => ({ date: d.date, value: metric.value(d) }));
 </script>
 
 <section class="panel">
@@ -34,9 +44,9 @@
     </p>
   {:else}
     <div class="grid">
-      {#each METRICS as m (m.key)}
-        {#if series(m.key).length >= 2}
-          <LineChart points={series(m.key)} title={m.title} format={m.format} />
+      {#each METRICS as m (m.title)}
+        {#if points(m).length >= 2}
+          <LineChart points={points(m)} title={m.title} format={m.format} />
         {/if}
       {/each}
     </div>
@@ -50,7 +60,7 @@
           {#each [...days].reverse() as d (d.date)}
             <tr>
               <td>{new Date(d.date).toLocaleDateString('de-DE')}</td>
-              <td class="num">{fmt(d.questsDone)}</td>
+              <td class="num">{fmt(questsDone(d))}</td>
               <td class="num">{fmt(Math.round(d.money ?? 0))}</td>
               <td class="num">{fmt(d.points ?? 0)}</td>
               <td class="num">{d.level ?? ''}</td>
