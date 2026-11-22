@@ -45,31 +45,58 @@
   }
 
   // Was der Bot laut seinen Meldungen getan hat (actions aus log.json), als Chips.
+  // Symbol je Kennzeichen, das der Bot an seine Meldungen hängt (tag); dasselbe Symbol steht am Chip
+  // und in den Details an jeder Zeile, die zu diesem Chip beiträgt.
+  const TAG_ICON = {
+    planted: '🌱',
+    watered: '💧',
+    weeded: '🧹',
+    park: '🏞',
+    parkRenewed: '🔄',
+    bonsaiFinished: '🌳',
+    branchesCut: '✂',
+    scissorsBought: '🛒',
+    problem: '⚠',
+  };
+
+  const FROM_MESSAGES = 'Aus den Meldungen des Bots in diesem Lauf';
+
+  // Was der Bot laut seinen Meldungen getan hat (actions aus log.json), als Chips mit Herkunft im Tooltip.
   function actionChips(a) {
     if (!a) return [];
     const chips = [];
     const n = (v) => fmt(v);
-    if (a.planted) chips.push({ text: `🌱 ${n(a.planted)} gepflanzt` });
-    if (a.watered) chips.push({ text: `💧 ${n(a.watered)} gegossen` });
-    if (a.weeded) chips.push({ text: `🧹 ${n(a.weeded)} Unkraut` });
+    const add = (tag, text, source, cls) => chips.push({ text: `${TAG_ICON[tag]} ${text}`, title: `${FROM_MESSAGES}: ${source}`, cls });
+    if (a.planted) add('planted', `${n(a.planted)} gepflanzt`, '„Im Garten … wurden … Pflanzen gepflanzt“, über alle Gärten summiert');
+    if (a.watered) add('watered', `${n(a.watered)} gegossen`, '„Im Garten … wurden … Pflanzen gegossen“, über alle Gärten summiert');
+    if (a.weeded) add('weeded', `${n(a.weeded)} Unkraut`, '„… Felder von Unkraut befreit“, über alle Gärten summiert');
     if (a.parkMoney || a.parkPoints || a.parkParkpoints) {
-      chips.push({
-        text: `🏞 Park +${n(a.parkMoney ?? 0)} wT`,
-        title: `Parkkasse: ${n(a.parkMoney ?? 0)} wT, ${n(a.parkPoints ?? 0)} Punkte, ${n(a.parkParkpoints ?? 0)} Parkpunkte`,
-      });
+      add(
+        'park',
+        `Park +${n(a.parkMoney ?? 0)} wT`,
+        `Parkkasse eingesammelt („Collected: …“): ${n(a.parkMoney ?? 0)} wT, ${n(a.parkPoints ?? 0)} Punkte, ${n(a.parkParkpoints ?? 0)} Parkpunkte`,
+      );
     }
-    if (a.parkRenewed) chips.push({ text: `🏞 ${n(a.parkRenewed)} erneuert` });
-    if (a.bonsaiFinished) chips.push({ text: `🌳 ${n(a.bonsaiFinished)} Bonsai fertig` });
-    if (a.branchesCut) chips.push({ text: `✂ ${n(a.branchesCut)} Äste` });
-    if (a.scissorsBought) chips.push({ text: `✂ ${n(a.scissorsBought)} Scheren gekauft` });
+    if (a.parkRenewed) add('parkRenewed', `${n(a.parkRenewed)} erneuert`, 'abgelaufene Park-Dekos neu gekauft („Renewed … Items“); kostet Wurzeltaler');
+    if (a.bonsaiFinished) add('bonsaiFinished', `${n(a.bonsaiFinished)} Bonsai fertig`, '„Finish Bonsai in slot …“');
+    if (a.branchesCut) add('branchesCut', `${n(a.branchesCut)} Äste`, 'Bonsai-Äste geschnitten („Cut branch …“)');
+    if (a.scissorsBought) add('scissorsBought', `${n(a.scissorsBought)} Scheren gekauft`, '„Rebuying … normal scissors“');
     if (a.problems?.length) {
-      chips.push({
-        text: `⚠ ${a.problems.length} ${a.problems.length === 1 ? 'Hinweis' : 'Hinweise'}`,
-        title: a.problems.join('\n'),
-        cls: 'warn',
-      });
+      add(
+        'problem',
+        `${a.problems.length} ${a.problems.length === 1 ? 'Hinweis' : 'Hinweise'}`,
+        `Warnungen und Fehler:\n${a.problems.join('\n')}`,
+        'warn',
+      );
     }
     return chips;
+  }
+
+  // Herkunft der übrigen Chips: kein Text vom Bot, sondern der Vergleich zweier Spielstände
+  function compareTitle(e, what) {
+    return e.source === 'bot'
+      ? `${what}: Spielstand am Ende des Laufs verglichen mit dem Stand direkt nach dem Login`
+      : `${what}: Spielstand beim Login verglichen mit dem Ende des letzten Laufs (seit ${fmtClock(e.since)}), also von Hand oder durchs Spiel`;
   }
 </script>
 
@@ -122,27 +149,41 @@
             </div>
             <div class="what">
               {#if e.changes.level}
-                <span class="chip quest">🎉 Level {e.changes.level[0]} → {e.changes.level[1]}</span>
+                <span class="chip quest" title={compareTitle(e, 'Level')}>
+                  🎉 Level {e.changes.level[0]} → {e.changes.level[1]}
+                </span>
               {/if}
               {#each Object.entries(e.changes.series ?? {}) as [id, [from, to]] (id)}
-                <span class="chip quest">✔ {seriesName(id)} {from} → {to}</span>
+                <span class="chip quest" title={compareTitle(e, `Erledigte Quests der Reihe ${seriesName(id)}`)}>
+                  ✔ {seriesName(id)} {from} → {to}
+                </span>
               {/each}
               {#if e.changes.money}
-                <span class="chip" class:plus={e.changes.money > 0} class:minus={e.changes.money < 0}>
+                <span
+                  class="chip"
+                  class:plus={e.changes.money > 0}
+                  class:minus={e.changes.money < 0}
+                  title={compareTitle(e, 'Kontostand (Wurzeltaler)')}
+                >
                   💰 {fmtDelta(e.changes.money)} wT
                 </span>
               {/if}
               {#if e.changes.points}
-                <span class="chip plus">⭐ {fmtDelta(e.changes.points)}</span>
+                <span class="chip plus" title={compareTitle(e, 'Punkte')}>⭐ {fmtDelta(e.changes.points)}</span>
               {/if}
               {#if e.changes.coins}
-                <span class="chip">🪙 {fmtDelta(e.changes.coins)} Coins</span>
+                <span class="chip" title={compareTitle(e, 'Coins')}>🪙 {fmtDelta(e.changes.coins)} Coins</span>
               {/if}
               {#each actionChips(e.actions) as c (c.text)}
-                <span class="chip act {c.cls ?? ''}" title={c.title ?? ''}>{c.text}</span>
+                <span class="chip act {c.cls ?? ''}" title={c.title}>{c.text}</span>
               {/each}
               {#each open ? stock : stock.slice(0, STOCK_PREVIEW) as [name, delta] (name)}
-                <span class="chip" class:plus={delta > 0} class:minus={delta < 0}>{fmtDelta(delta)} {name}</span>
+                <span
+                  class="chip"
+                  class:plus={delta > 0}
+                  class:minus={delta < 0}
+                  title={compareTitle(e, `Regalbestand ${name}`)}>{fmtDelta(delta)} {name}</span
+                >
               {/each}
               {#if stock.length > STOCK_PREVIEW && !open}
                 <button class="more" onclick={() => (expanded = { ...expanded, [key(e)]: true })}>
@@ -154,9 +195,14 @@
               <!-- der genaue Text, den der Bot in diesem Lauf gemeldet hat -->
               <ol class="messages">
                 {#each e.messages as m, j (j)}
-                  <li class={m.level}>{m.text}{#if m.count > 1}<span class="times"> ×{m.count}</span>{/if}</li>
+                  <li class={m.level}>
+                    <span class="tag" title={m.tag ? 'Diese Zeile zählt für den Chip mit diesem Symbol' : ''}
+                      >{TAG_ICON[m.tag] ?? ''}</span
+                    ><span>{m.text}{#if m.count > 1}<span class="times"> ×{m.count}</span>{/if}</span>
+                  </li>
                 {/each}
               </ol>
+              <p class="legend">Zeilen mit Symbol ergeben die Chips mit demselben Symbol oben.</p>
             {/if}
           </li>
         {/each}
@@ -279,7 +325,18 @@
     overflow-x: auto;
   }
   .messages li {
+    display: grid;
+    grid-template-columns: 1.6rem minmax(0, 1fr);
     white-space: pre-wrap;
+  }
+  .messages .tag {
+    font-family: system-ui, sans-serif;
+  }
+  .legend {
+    grid-column: 1 / -1;
+    margin: -0.3rem 0 0;
+    font-size: 0.72rem;
+    color: var(--muted);
   }
   .messages li.warning {
     color: var(--warn);
