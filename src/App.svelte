@@ -11,6 +11,8 @@
     harvestAt,
     boosters,
     boosterState,
+    nextRun,
+    TIMER_ICON,
   } from './lib/data.js';
   import { fmtDuration, fmtDurationShort, fmtShort, fmtUntil, fmt, fmtClock } from './lib/format.js';
   import { settings } from './lib/store.js';
@@ -21,6 +23,7 @@
   import Charts from './lib/components/Charts.svelte';
   import Stock from './lib/components/Stock.svelte';
   import Log from './lib/components/Log.svelte';
+  import NextRun from './lib/components/NextRun.svelte';
 
   // Ansicht und Reihe stehen im Hash der URL (#/bestand, #/reihen/bonsai), damit
   // jeder Tab einen Link hat und Zurück/Vor im Browser funktioniert. Hash statt
@@ -115,6 +118,20 @@
       ),
     ].join('\n'),
   );
+
+  // Nächster Lauf mit Arbeit: früheste Zeit, um die sich der Bot kümmert; im Tooltip alle Zeitgeber.
+  let nextRunTitle = $derived(
+    nextRun?.timers
+      ? [
+          'Nächster Lauf mit Arbeit (aus den Zeitgebern beim letzten Lauf):',
+          ...nextRun.timers.map(
+            (t) =>
+              `${TIMER_ICON[t.key] ?? '•'} ${t.text}: ${t.due ? 'offen' : `${fmtClock(t.at)} (${fmtUntil(t.at, now)})`}` +
+              (t.bot ? '' : ' [Info]'),
+          ),
+        ].join('\n')
+      : '',
+  );
 </script>
 
 <svelte:window onhashchange={onHashChange} />
@@ -171,6 +188,13 @@
             : `G${nextBooster.garden} ${fmtDurationShort(nextBooster.readyIn / 60)}`}
         </span>
       {/if}
+      {#if nextRun?.stopped}
+        <span class="item" title="Der Bot ist in der Notiz angehalten">⏸ angehalten</span>
+      {:else if nextRun?.at}
+        <span class="item" title={nextRunTitle}>
+          ⏭ {fmtClock(nextRun.at)} {TIMER_ICON[nextRun.key] ?? ''}
+        </span>
+      {/if}
     {:else}
       <span class="item" title="Live-Stand nicht erreichbar, eingebauter Stand aus progress.json">Offline</span>
     {/if}
@@ -220,6 +244,7 @@
 {:else if view === 'log'}
   <main class="content wide">
     <h2 class="reco-title">Protokoll</h2>
+    <NextRun {now} />
     <Log />
   </main>
 {:else}

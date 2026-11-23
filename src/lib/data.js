@@ -44,6 +44,26 @@ export const account = live ? { money: live.money ?? null, coins: live.coins ?? 
 // Früheste Ernte je Pflanze ({ Name: ISO-Zeit }), nur im Live-Stand.
 export const harvestAt = live?.harvestAt ?? {};
 
+// Nächster Lauf aus dem Live-Stand: { at, key, text, timers: [{ at, key, text, bot, due }] } oder { stopped }.
+// at ist der früheste Zeitgeber, um den sich der Bot kümmert; due = schon beim Lauf fällig, aber nicht erledigt
+// (z. B. kein Saatgut), zählt deshalb nicht. bot = false: macht der Bot (noch) nicht selbst.
+export const nextRun = live?.nextRun ?? null;
+export const TIMER_ICON = {
+  harvest: '🌾',
+  water: '💧',
+  plant: '🌱',
+  booster: '✨',
+  bonsai: '🌳',
+  parkCash: '🎡',
+  parkRenew: '🔁',
+  deco1: '🎁',
+  deco2: '🎁',
+  museum: '🏛',
+  bees: '🐝',
+  infinity: '♾',
+  daily: '📅',
+};
+
 // Wachstums-Dekos (Booster) aus dem Live-Stand: [{ garden, name, reduction, cooldown, readyAt, plants,
 // minGrowLeft, ... }], Zeiten in Sekunden. boosterState rechnet „bereit“ und „lohnt“ für die aktuelle Uhrzeit
 // nach, weil die Seite auch eine Weile nach dem letzten Lauf offen sein kann.
