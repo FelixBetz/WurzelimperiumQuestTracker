@@ -1,5 +1,5 @@
 <script>
-  import { fmt } from "../format.js";
+  import { fmt, fmtShort } from "../format.js";
   import { stockTitle } from "../data.js";
 
   // r = Quest-Anforderung aus questShopCost (mit stock und needed).
@@ -20,6 +20,8 @@
   {#if r.sent}<span class="amount">📤 {fmt(r.sent)}</span>{/if}
   <span class="amount">📦 {fmt(r.stock)}</span>
   <span class="pct">{pctLabel}</span>
+  <!-- was die fehlende Menge im Shop kostet (fehlt × Stückpreis) -->
+  {#if !enough && r.restTotal}<span class="rest">{fmtShort(r.restTotal)} wT</span>{/if}
 </span>
 
 <style>
@@ -56,6 +58,9 @@
   }
   .pct {
     font-weight: 600;
+  }
+  .rest {
+    color: var(--warn);
   }
   .partial .pct {
     color: var(--warn);

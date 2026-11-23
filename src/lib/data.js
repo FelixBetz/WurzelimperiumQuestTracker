@@ -433,7 +433,9 @@ export function stockTitle(r) {
   const shared =
     r.stock !== r.stockTotal ? ` · Regal gesamt ${nf(r.stockTotal)}, Rest nach früheren Quests der Reihe` : '';
   const sent = r.sent ? `Abgegeben: ${nf(r.sent)} · ` : '';
-  const missing = r.missing ? ` · fehlt: ${nf(r.missing)}` : '';
+  const missing = r.missing
+    ? ` · fehlt: ${nf(r.missing)}${r.restTotal ? ` (${nf(Math.round(r.restTotal))} wT)` : ''}`
+    : '';
   return `${sent}Verfügbar: ${nf(r.stock)} von ${nf(r.needed)}${missing}${shared}${updated}`;
 }
 
