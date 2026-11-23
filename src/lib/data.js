@@ -356,7 +356,7 @@ const sentByQuest = (() => {
 })();
 
 function sentAmount(quest, r) {
-  const items = sentByQuest.get(quest.id);
+  const items = quest.sentItems ?? sentByQuest.get(quest.id);
   if (!items) return 0;
   for (const candidate of itemNameCandidates(r.item)) {
     const n = items.get(stockKey(candidate));
@@ -412,7 +412,7 @@ const availableStock = (() => {
 // Gegenstand nicht im Bestand geführt wird. sent = schon abgegeben, missing = was
 // danach noch fehlt (Bedarf minus abgegeben minus Regal).
 function requirementStock(quest, i, r) {
-  const hit = availableStock.get(`${quest.id}:${i}`);
+  const hit = availableStock.get(`${quest.id}:${i}`) ?? (quest.ownStock ? fullStock(r) : null);
   const needed = neededAmount(r);
   const sent = sentAmount(quest, r);
   const stock = hit?.stock ?? null;
@@ -424,6 +424,43 @@ function requirementStock(quest, i, r) {
     missing: stock == null ? null : Math.max(0, needed - sent - stock),
   };
 }
+
+// Quests außerhalb der Reihen (Infinity-Quest) rechnen mit dem ganzen Regal.
+function fullStock(r) {
+  const key = resolveStockKey(r.item);
+  if (key === null) return null;
+  const total = stockLookup.get(key);
+  return { stock: total, stockTotal: total };
+}
+
+// Infinity-Quest (ab Level 22, bis Quest 500) aus dem Live-Stand: live.infinity = { quest, max, products:
+// [{ name, amount, sent }], reward: ["24.720 wT"], readyAt (solange sie abkühlt), limit }. Die Quest hat keine
+// feste Liste; quest hat dieselbe Form wie eine Quest einer Reihe, damit QuestCard sie zeigen kann.
+function parseReward(text) {
+  const m = String(text).match(/^([\d.]+)\s*(wT|Punkte)$/);
+  if (!m) return { type: 'item', value: String(text) };
+  return { type: m[2] === 'wT' ? 'taler' : 'punkte', amount: Number(m[1].replaceAll('.', '')) };
+}
+
+export const infinity = (() => {
+  const inf = live?.infinity;
+  if (!inf?.quest) return null;
+  const products = inf.products ?? [];
+  return {
+    done: Math.max(0, inf.quest - 1),
+    max: inf.max ?? 500,
+    readyAt: inf.readyAt ?? null,
+    limit: inf.limit ?? null,
+    quest: {
+      id: `infinity#${inf.quest}`,
+      nr: inf.quest,
+      requirements: products.map((p) => ({ item: p.name, amount: p.amount })),
+      rewards: (inf.reward ?? []).map(parseReward),
+      ownStock: true,
+      sentItems: new Map(products.map((p) => [stockKey(p.name), Number(p.sent) || 0])),
+    },
+  };
+})();
 
 export function stockTitle(r) {
   const updated = stockData.updatedAt

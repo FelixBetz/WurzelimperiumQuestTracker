@@ -49,7 +49,7 @@ Speichern der Datei (Hot-Reload).
 ## Live-Stand (status.json)
 
 Der Bot ([wurzelimperium-daily](https://github.com/FelixBetz/wurzelimperium-daily)) schreibt bei
-jedem Lauf (alle 15 Minuten) eine `status.json` mit Level, Fortschritt je Reihe,
+jedem Lauf (nach Bedarf, spätestens stündlich) eine `status.json` mit Level, Fortschritt je Reihe,
 Regalbestand und dem, was gerade wächst. Ist die Repo-Variable `STATUS_URL` gesetzt
 (GitHub: Settings › Secrets and variables › Actions › Variables), holt die Seite
 diese Datei beim Öffnen. Werte daraus überschreiben `progress.json` und `stock.json`;
@@ -58,14 +58,18 @@ Datei nicht erreichbar, zeigt die Seite „Offline-Stand“ und den eingebauten 
 
 Neben `status.json` liegen `log.json` (Tab „Protokoll“: was der Bot in einem Lauf geändert
 hat und was sich zwischen zwei Läufen von Hand getan hat, 14 Tage) und `history.json`
-(Charts, „Verlauf“: ein Eintrag pro Tag). Die Kopfzeile warnt, wenn der letzte Lauf
-länger als 40 Minuten her ist, und zeigt Wurzeltaler, Punkte und die nächste Ernte.
+(Charts, „Verlauf“: ein Eintrag pro Tag). Die Kopfzeile zeigt Wurzeltaler, Punkte, die
+nächste Ernte und den geplanten nächsten Lauf; sie warnt, wenn der 15 Minuten überfällig ist.
 Gesperrte Reihen, die der Bot kennt (Wassergarten, Recyclinghof usw.), schaltet der
 Live-Stand frei; der Rest bleibt in `progress.json` unter `locked`.
 
 Wachstums-Dekos (z. B. „Orgelspieler Olaf“, spart 6 h, 48 h Abklingzeit) stehen im Tab
 „Bestand“ mit ihrer Abklingzeit. „Bereit · lohnt“ heißt: Die Deko ist bereit und jede
 Pflanze in ihrem Garten wächst noch mindestens so lange, wie die Deko spart.
+
+Die Infinity-Quest (ab Level 22, bis Quest 500) steht oben im Tab „Nächste Quests“: erledigte
+Quests von 500, die aktuelle Quest mit Regal, Abgegebenem und Restkosten, und ob sie offen ist,
+abkühlt oder wartet, weil der Kontostand unter `infinityQuestLimit` aus der Notiz liegt.
 
 Lokal: `VITE_STATUS_URL=https://... npm run dev`.
 

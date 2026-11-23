@@ -8,6 +8,7 @@
     questShopCost,
   } from "../data.js";
   import Requirement from "./Requirement.svelte";
+  import InfinityCard from "./InfinityCard.svelte";
   import { settings } from "../store.js";
   import { fmt, questLabel, rewardLabel, rewardIcon } from "../format.js";
 
@@ -37,6 +38,8 @@
 </script>
 
 <div class="next">
+  <InfinityCard />
+
   <p class="stats">{rows.length} Reihen</p>
 
   {#if rows.length === 0}
