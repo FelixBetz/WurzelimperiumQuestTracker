@@ -33,6 +33,17 @@ export async function loadSibling(file) {
   return res.json();
 }
 
+// Zeit des neuesten Laufs auf dem Server (null ohne Live-Stand oder bei Fehler), um einen neuen Lauf zu erkennen.
+export async function latestUpdatedAt() {
+  if (!STATUS_URL) return null;
+  try {
+    const res = await fetch(STATUS_URL, { cache: 'no-cache', signal: AbortSignal.timeout(6000) });
+    return res.ok ? ((await res.json())?.updatedAt ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
 // Zustand des Bots für die Kopfzeile: Wann lief er zuletzt, mit welchem Code, gab es Lesefehler?
 export const botHealth = live
   ? { updatedAt: live.updatedAt, codeVersion: live.codeVersion ?? null, errors: live.errors ?? [] }

@@ -13,6 +13,7 @@
     boosterState,
     nextRun,
     TIMER_ICON,
+    latestUpdatedAt,
   } from './lib/data.js';
   import { fmtDuration, fmtDurationShort, fmtShort, fmtUntil, fmt, fmtClock } from './lib/format.js';
   import { settings } from './lib/store.js';
@@ -95,6 +96,32 @@
   let plannedAt = $derived(
     live ? new Date(new Date(live.updatedAt).getTime() + plannedMinutes * 60000).toISOString() : null,
   );
+
+  // Neuer Lauf, neue Seite: Ab einer Minute nach dem geplanten Lauf fragt die Seite jede Minute nach status.json
+  // (nur wenn sie sichtbar ist) und lädt sich neu, sobald ein neuerer Stand da ist. Der Bot startet bis zu 2 Minuten
+  // nach der geplanten Zeit und braucht etwa eine Minute.
+  $effect(() => {
+    if (!plannedAt) return;
+    const from = new Date(plannedAt).getTime() + 60_000;
+    let lastCheck = 0;
+    let busy = false;
+    async function check() {
+      const t = Date.now();
+      if (busy || document.hidden || t < from || t - lastCheck < 55_000) return;
+      busy = true;
+      lastCheck = t;
+      const updatedAt = await latestUpdatedAt();
+      busy = false;
+      if (updatedAt && updatedAt !== live.updatedAt) location.reload();
+    }
+    const timer = setInterval(check, 15_000);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', check);
+    };
+  });
+
   let healthTitle = $derived(
     botHealth
       ? [
