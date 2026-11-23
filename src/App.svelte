@@ -79,14 +79,27 @@
     return () => clearInterval(timer);
   });
 
-  // Der Bot läuft alle 15 bis 20 Minuten; nach 40 Minuten ohne neuen Stand stimmt etwas nicht.
-  const STALE_MINUTES = 40;
+  // Der Bot läuft, wenn sein letzter Lauf Arbeit eingeplant hat (nextRun.at), frühestens 10 und spätestens
+  // 60 Minuten danach (due.py im Bot); ohne nextRun alle 15 Minuten. 15 Minuten nach dem geplanten Lauf ohne
+  // neuen Stand stimmt etwas nicht.
+  const STALE_GRACE = 15;
   let ageMinutes = $derived(botHealth ? (now - new Date(botHealth.updatedAt).getTime()) / 60000 : 0);
-  let stale = $derived(ageMinutes > STALE_MINUTES);
+  let plannedMinutes = $derived.by(() => {
+    if (!live) return 0;
+    if (!live.nextRun) return 15;
+    if (!live.nextRun.at) return 60;
+    const at = (new Date(live.nextRun.at).getTime() - new Date(live.updatedAt).getTime()) / 60000;
+    return Math.min(60, Math.max(10, at));
+  });
+  let stale = $derived(ageMinutes > plannedMinutes + STALE_GRACE);
+  let plannedAt = $derived(
+    live ? new Date(new Date(live.updatedAt).getTime() + plannedMinutes * 60000).toISOString() : null,
+  );
   let healthTitle = $derived(
     botHealth
       ? [
           `Letzter Lauf: ${liveStand} (vor ${fmtDuration(ageMinutes)})`,
+          `Nächster Lauf geplant: ${fmtClock(plannedAt)}`,
           botHealth.codeVersion ? `Code: ${botHealth.codeVersion}` : null,
           botHealth.errors.length ? `Lesefehler:\n${botHealth.errors.join('\n')}` : 'Keine Lesefehler',
         ]
@@ -190,9 +203,10 @@
       {/if}
       {#if nextRun?.stopped}
         <span class="item" title="Der Bot ist in der Notiz angehalten">⏸ angehalten</span>
-      {:else if nextRun?.at}
+      {:else if plannedAt}
+        <!-- geplanter Lauf: nextRun.at, aber frühestens 10 und spätestens 60 Minuten nach dem letzten Lauf -->
         <span class="item" title={nextRunTitle}>
-          ⏭ {fmtClock(nextRun.at)} {TIMER_ICON[nextRun.key] ?? ''}
+          ⏭ {fmtClock(plannedAt)} {nextRun?.at && new Date(nextRun.at) <= new Date(plannedAt) ? (TIMER_ICON[nextRun.key] ?? '') : ''}
         </span>
       {/if}
     {:else}
