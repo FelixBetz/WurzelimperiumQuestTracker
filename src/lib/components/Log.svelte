@@ -55,6 +55,7 @@
     parkRenewed: '🔄',
     bonsaiFinished: '🌳',
     branchesCut: '✂',
+    boosted: '✨',
     scissorsBought: '🛒',
     problem: '⚠',
   };
@@ -75,6 +76,7 @@
     bonsai: ['🌳', 'Bonsai'],
     infinity: ['♾', 'Infinity-Quest'],
     minigames: ['🎲', 'Minispiele'],
+    boosters: ['✨', 'Wachstums-Dekos'],
   };
 
   function stepInfo(s) {
@@ -108,6 +110,7 @@
       `Park ${st.park ? 'an' : 'aus'}`,
       `Bienen ${bees}`,
       `Minispiele ${st.minigames ? 'an' : 'aus'}`,
+      st.boosters != null ? `Wachstums-Dekos ${st.boosters ? 'an' : 'aus'}` : null,
       st.infinityLimit != null ? `Infinity ab ${fmt(st.infinityLimit)} wT` : null,
       st.bonsaiCutLevel != null ? `Bonsai-Stufe ${st.bonsaiCutLevel} (${(st.bonsaiPrices ?? []).join(', ')})` : null,
     ]
@@ -138,6 +141,7 @@
     }
     if (a.parkRenewed) add('parkRenewed', `${n(a.parkRenewed)} erneuert`, 'abgelaufene Park-Dekos neu gekauft („Renewed … Items“); kostet Wurzeltaler');
     if (a.bonsaiFinished) add('bonsaiFinished', `${n(a.bonsaiFinished)} Bonsai fertig`, '„Finish Bonsai in slot …“');
+    if (a.boosted) add('boosted', `${n(a.boosted)} Deko${a.boosted > 1 ? 's' : ''}`, 'Wachstums-Dekos ausgelöst („Booster … ausgelöst“)');
     if (a.branchesCut) add('branchesCut', `${n(a.branchesCut)} Äste`, 'Bonsai-Äste geschnitten („Cut branch …“)');
     if (a.scissorsBought) add('scissorsBought', `${n(a.scissorsBought)} Scheren gekauft`, '„Rebuying … normal scissors“');
     if (a.problems?.length) {
