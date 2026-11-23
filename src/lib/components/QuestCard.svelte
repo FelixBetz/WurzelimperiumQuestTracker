@@ -46,6 +46,22 @@
         </span>
       {/if}
 
+      {#if !done && shop.restTotal != null && shop.shopItemCount > 0}
+        <span
+          class="reward rest"
+          class:zero={shop.restTotal === 0}
+          title={"Was nach Abgegebenem und Regal noch zu kaufen wäre" +
+            (shop.restComplete ? "" : " (nicht alle Posten haben einen Preis)") +
+            "\n" +
+            shop.requirements
+              .filter((r) => r.restTotal)
+              .map((r) => `${r.item}: ${fmt(r.missing)} × ${fmt(r.unitPrice)} = ${fmt(Math.round(r.restTotal))} wT`)
+              .join("\n")}
+        >
+          {shop.restTotal === 0 ? "Rest ✓" : `Rest ${fmt(Math.round(shop.restTotal))} wT`}
+        </span>
+      {/if}
+
       {#if quest.rewards.length === 0}
         <span class="reward">–</span>
       {:else}
@@ -138,6 +154,13 @@
   .reward.shop {
     color: var(--text);
     font-weight: 600;
+  }
+  .reward.rest {
+    color: var(--warn);
+    font-weight: 600;
+  }
+  .reward.rest.zero {
+    color: var(--accent-strong);
   }
   .reward.shop.partial,
   .reward.shop.missing {

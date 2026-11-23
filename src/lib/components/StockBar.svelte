@@ -3,18 +3,21 @@
   import { stockTitle } from "../data.js";
 
   // r = Quest-Anforderung aus questShopCost (mit stock und needed).
+  // Schon abgegebene Mengen (Bonsai, Park, Bienen) zählen wie im Spiel mit: abgegeben + Regal von Bedarf.
   let { r } = $props();
+  let have = $derived(r.stock + (r.sent ?? 0));
   let pct = $derived(
-    r.needed > 0 ? Math.min(100, (r.stock / r.needed) * 100) : 100,
+    r.needed > 0 ? Math.min(100, (have / r.needed) * 100) : 100,
   );
-  let enough = $derived(r.stock >= r.needed);
+  let enough = $derived(have >= r.needed);
   let pctLabel = $derived(
-    enough ? "✓" : r.stock > 0 && pct < 1 ? "<1 %" : `${Math.floor(pct)} %`,
+    enough ? "✓" : have > 0 && pct < 1 ? "<1 %" : `${Math.floor(pct)} %`,
   );
 </script>
 
-<span class="stock" class:enough class:partial={!enough && r.stock > 0} title={stockTitle(r)}>
+<span class="stock" class:enough class:partial={!enough && have > 0} title={stockTitle(r)}>
   <span class="bar"><span class="fill" style:width="{pct}%"></span></span>
+  {#if r.sent}<span class="amount">📤 {fmt(r.sent)}</span>{/if}
   <span class="amount">📦 {fmt(r.stock)}</span>
   <span class="pct">{pctLabel}</span>
 </span>

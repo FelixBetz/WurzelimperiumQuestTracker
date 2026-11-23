@@ -18,7 +18,7 @@
   }
 </script>
 
-<span class="req" class:ready={showStock && r.stock != null && r.stock >= r.needed}>
+<span class="req" class:ready={showStock && r.stock != null && r.stock + (r.sent ?? 0) >= r.needed}>
   <span
     class="name"
     title={r.hasPrice ? `${fmt(r.total)} wT · ${itemCostTitle(r)}` : ""}

@@ -341,6 +341,35 @@ function neededAmount(r) {
 // geführt werden (z. B. Riegel, Wurzeltaler), fehlen.
 const stockNameByKey = new Map(Object.keys(stockData.items ?? {}).map((name) => [stockKey(name), name]));
 
+// Bonsai, Park und Bienen nehmen Teillieferungen: Was für die aktuelle Quest schon abgegeben ist, kommt aus dem
+// Live-Stand (live.sent: { seriesId: { quest, items: { Name: Menge } } }) und fehlt nicht mehr.
+// Map { quest.id: Map { stockKey: Menge } }, nur wenn die Questnummer zum Fortschritt passt.
+const sentByQuest = (() => {
+  const out = new Map();
+  for (const s of series) {
+    const info = live?.sent?.[s.id];
+    const q = info && currentQuest(s, progress);
+    if (!q || q.nr !== info.quest) continue;
+    out.set(q.id, new Map(Object.entries(info.items ?? {}).map(([name, n]) => [stockKey(name), Number(n) || 0])));
+  }
+  return out;
+})();
+
+function sentAmount(quest, r) {
+  const items = sentByQuest.get(quest.id);
+  if (!items) return 0;
+  for (const candidate of itemNameCandidates(r.item)) {
+    const n = items.get(stockKey(candidate));
+    if (n != null) return n;
+  }
+  return 0;
+}
+
+// Was für die Quest noch fehlt: Bedarf minus schon abgegeben.
+function openAmount(quest, r) {
+  return Math.max(0, neededAmount(r) - sentAmount(quest, r));
+}
+
 export function stockDemand(quests) {
   const out = new Map();
   for (const q of quests) {
@@ -350,7 +379,7 @@ export function stockDemand(quests) {
       if (key === null) continue;
       const name = stockNameByKey.get(key);
       const e = out.get(name) ?? { needed: 0, quests: 0 };
-      e.needed += neededAmount(r);
+      e.needed += openAmount(q, r);
       e.quests += 1;
       out.set(name, e);
     }
@@ -372,7 +401,7 @@ const availableStock = (() => {
         const spent = used.get(key) ?? 0;
         const total = stockLookup.get(key);
         out.set(`${q.id}:${i}`, { stock: Math.max(0, total - spent), stockTotal: total });
-        used.set(key, spent + neededAmount(r));
+        used.set(key, spent + openAmount(q, r));
       });
     }
   }
@@ -380,13 +409,19 @@ const availableStock = (() => {
 })();
 
 // stock = für diese Quest verfügbare Menge, null wenn sie erledigt ist oder der
-// Gegenstand nicht im Bestand geführt wird.
+// Gegenstand nicht im Bestand geführt wird. sent = schon abgegeben, missing = was
+// danach noch fehlt (Bedarf minus abgegeben minus Regal).
 function requirementStock(quest, i, r) {
   const hit = availableStock.get(`${quest.id}:${i}`);
+  const needed = neededAmount(r);
+  const sent = sentAmount(quest, r);
+  const stock = hit?.stock ?? null;
   return {
-    stock: hit?.stock ?? null,
+    stock,
     stockTotal: hit?.stockTotal ?? null,
-    needed: neededAmount(r),
+    needed,
+    sent,
+    missing: stock == null ? null : Math.max(0, needed - sent - stock),
   };
 }
 
@@ -397,13 +432,17 @@ export function stockTitle(r) {
   const nf = (n) => n.toLocaleString('de-DE');
   const shared =
     r.stock !== r.stockTotal ? ` · Regal gesamt ${nf(r.stockTotal)}, Rest nach früheren Quests der Reihe` : '';
-  return `Verfügbar: ${nf(r.stock)} von ${nf(r.needed)}${shared}${updated}`;
+  const sent = r.sent ? `Abgegeben: ${nf(r.sent)} · ` : '';
+  const missing = r.missing ? ` · fehlt: ${nf(r.missing)}` : '';
+  return `${sent}Verfügbar: ${nf(r.stock)} von ${nf(r.needed)}${missing}${shared}${updated}`;
 }
 
 // Berechnet den Shop-Wert einer Quest anhand der benötigten Pflanzen.
 // Gibt bei fehlenden Preisen einen Teilwert + Liste fehlender Shop-Items zurück.
 export function questShopCost(quest) {
   let total = 0;
+  let restTotal = 0;
+  let restCount = 0;
   let currencyTotal = 0;
   let shopItemCount = 0;
   let pricedRequirements = 0;
@@ -453,11 +492,18 @@ export function questShopCost(quest) {
       const lineTotal = hit.price * pricingAmount;
       total += lineTotal;
       pricedRequirements += 1;
+      const st = requirementStock(quest, i, r);
+      // Rest: was nach Abgabe und Regal noch zu kaufen wäre
+      if (st.missing != null) {
+        restTotal += st.missing * hit.price;
+        restCount += 1;
+      }
 
       requirements.push({
         item: r.item,
         amount: r.amount,
-        ...requirementStock(quest, i, r),
+        ...st,
+        restTotal: st.missing == null ? null : st.missing * hit.price,
         pricingAmount,
         isCurrency: false,
         isCraftOnly: false,
@@ -485,6 +531,9 @@ export function questShopCost(quest) {
 
   return {
     total,
+    // Restkosten: nur wenn der Bestand für die Quest bekannt ist (offene Quests); restComplete = für alle Posten mit Preis
+    restTotal: restCount > 0 ? restTotal : null,
+    restComplete: restCount === pricedRequirements && missing.size === 0,
     currencyTotal,
     shopItemCount,
     hasAnyPrice: pricedRequirements > 0,
